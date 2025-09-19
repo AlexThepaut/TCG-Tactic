@@ -23,7 +23,6 @@
     /* Linting */
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true,
 
     /* Path mapping */
     "baseUrl": "./src",
@@ -39,8 +38,7 @@
     }
   },
   "include": [
-    "src",
-    "vite.config.ts"
+    "src"
   ],
   "exclude": [
     "node_modules",

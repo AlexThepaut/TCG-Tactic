@@ -2,10 +2,11 @@
   "name": "tcg-tactique-backend",
   "version": "1.0.0",
   "description": "TCG Tactique Backend - Node.js/Express/TypeScript server with Socket.io",
-  "main": "dist/index.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node dist/index.js",
-    "dev": "nodemon src/index.ts",
+    "start": "node dist/server.js",
+    "dev": "nodemon src/server.ts",
+    "dev:setup": "mkdir -p logs && npm run dev",
     "build": "tsc",
     "build:watch": "tsc --watch",
     "test": "jest",
@@ -46,7 +47,8 @@
     "socket.io": "^4.7.2",
     "tsconfig-paths": "^4.2.0",
     "uuid": "^9.0.0",
-    "winston": "^3.10.0"
+    "winston": "^3.10.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.2",

@@ -39,63 +39,63 @@ services:
       retries: 5
 
   # Backend Service
-  backend:
-    build:
-      context: ./backend
-      dockerfile: Dockerfile
-      target: development
-    container_name: tcg-backend
-    environment:
-      NODE_ENV: development
-      PORT: 5001
-      DB_HOST: postgres
-      DB_PORT: 5432
-      DB_NAME: tcg_tactique
-      DB_USER: tcg_user
-      DB_PASSWORD: tcg_password
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      JWT_SECRET: development_jwt_secret_change_in_production
-    ports:
-      - "5001:5001"
-    volumes:
-      - ./backend:/app
-      - /app/node_modules
-    networks:
-      - tcg-network
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-    restart: unless-stopped
+  # backend:
+  #   build:
+  #     context: ./backend
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: tcg-backend
+  #   environment:
+  #     NODE_ENV: development
+  #     PORT: 5001
+  #     DB_HOST: postgres
+  #     DB_PORT: 5432
+  #     DB_NAME: tcg_tactique
+  #     DB_USER: tcg_user
+  #     DB_PASSWORD: tcg_password
+  #     REDIS_HOST: redis
+  #     REDIS_PORT: 6379
+  #     JWT_SECRET: development_jwt_secret_change_in_production
+  #   ports:
+  #     - "5001:5001"
+  #   volumes:
+  #     - ./backend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - tcg-network
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #   healthcheck:
+  #     test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+  #     interval: 30s
+  #     timeout: 10s
+  #     retries: 3
+  #   restart: unless-stopped
 
-  # Frontend Service
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: development
-    container_name: tcg-frontend
-    environment:
-      NODE_ENV: development
-      VITE_API_URL: http://localhost:5001
-      VITE_WS_URL: ws://localhost:5001
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    networks:
-      - tcg-network
-    depends_on:
-      - backend
-    restart: unless-stopped
+  # # Frontend Service
+  # frontend:
+  #   build:
+  #     context: ./frontend
+  #     dockerfile: Dockerfile
+  #     target: development
+  #   container_name: tcg-frontend
+  #   environment:
+  #     NODE_ENV: development
+  #     VITE_API_URL: http://localhost:5001
+  #     VITE_WS_URL: ws://localhost:5001
+  #   ports:
+  #     - "3000:3000"
+  #   volumes:
+  #     - ./frontend:/app
+  #     - /app/node_modules
+  #   networks:
+  #     - tcg-network
+  #   depends_on:
+  #     - backend
+  #   restart: unless-stopped
 
 networks:
   tcg-network:
