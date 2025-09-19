@@ -1,0 +1,176 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ma/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Users table for authentication and profile management
+model User {
+  id           Int      @id @default(autoincrement())
+  username     String   @unique @db.VarChar(50)
+  email        String   @unique @db.VarChar(100)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  decks         Deck[]
+  gamesAsPlayer1 Game[] @relation("Player1")
+  gamesAsPlayer2 Game[] @relation("Player2")
+  gamesWon      Game[] @relation("Winner")
+  gameStatesAsPlayer1 GameState[] @relation("GameStatePlayer1")
+  gameStatesAsPlayer2 GameState[] @relation("GameStatePlayer2")
+  gameStatesAsCurrent GameState[] @relation("GameStateCurrentPlayer")
+  userStats     UserStats?
+
+  @@map("users")
+}
+
+// Active cards pool (240-360 cards in rotation)
+model ActiveCard {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  faction   Faction
+  type      CardType
+  cost      Int      @db.SmallInt // 1-10 Void Echoes
+  attack    Int?     @db.SmallInt // NULL for spells
+  hp        Int?     @db.SmallInt // NULL for spells
+  range     String?  @db.VarChar(10) // e.g., "1-2", "3" for units
+  effects   String[] // Array of effects
+  setId     String   @map("set_id") @db.VarChar(20) // Rotation set identifier
+  createdAt DateTime @default(now()) @map("created_at")
+
+  // Relations
+  deckCards DeckCard[]
+
+  @@index([faction])
+  @@index([type])
+  @@index([cost])
+  @@index([setId])
+  @@map("active_cards")
+}
+
+// User decks (exactly 40 cards)
+model Deck {
+  id        Int      @id @default(autoincrement())
+  userId    Int      @map("user_id")
+  name      String   @db.VarChar(50)
+  faction   Faction
+  isValid   Boolean  @default(false) @map("is_valid")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deckCards DeckCard[]
+  gamesAsPlayer1Deck Game[] @relation("Player1Deck")
+  gamesAsPlayer2Deck Game[] @relation("Player2Deck")
+
+  @@index([userId])
+  @@index([faction])
+  @@map("decks")
+}
+
+// Cards in decks (max 4 per card)
+model DeckCard {
+  deckId   Int @map("deck_id")
+  cardId   Int @map("card_id")
+  quantity Int @db.SmallInt // 1-4 per card
+
+  // Relations
+  deck Deck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
+  card ActiveCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@id([deckId, cardId])
+  @@map("deck_cards")
+}
+
+// Game sessions
+model Game {
+  id            Int      @id @default(autoincrement())
+  player1Id     Int      @map("player1_id")
+  player2Id     Int      @map("player2_id")
+  player1DeckId Int      @map("player1_deck_id")
+  player2DeckId Int      @map("player2_deck_id")
+  winnerId      Int?     @map("winner_id")
+  durationSeconds Int?   @map("duration_seconds")
+  endReason     String?  @map("end_reason") @db.VarChar(50) // 'quest_completed', 'surrender', 'deck_empty'
+  createdAt     DateTime @default(now()) @map("created_at")
+  endedAt       DateTime? @map("ended_at")
+
+  // Relations
+  player1     User        @relation("Player1", fields: [player1Id], references: [id])
+  player2     User        @relation("Player2", fields: [player2Id], references: [id])
+  player1Deck Deck        @relation("Player1Deck", fields: [player1DeckId], references: [id])
+  player2Deck Deck        @relation("Player2Deck", fields: [player2DeckId], references: [id])
+  winner      User?       @relation("Winner", fields: [winnerId], references: [id])
+  gameStates  GameState[]
+
+  @@index([player1Id, player2Id])
+  @@map("games")
+}
+
+// Game state snapshots for real-time gameplay
+model GameState {
+  id              Int       @id @default(autoincrement())
+  gameId          Int       @map("game_id")
+  player1Id       Int       @map("player1_id")
+  player2Id       Int       @map("player2_id")
+  currentPlayerId Int       @map("current_player")
+  turn            Int       @default(1)
+  phase           GamePhase @default(resources)
+  boardStateJson  Json      @map("board_state_json") @db.JsonB
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  // Relations
+  game          Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player1       User @relation("GameStatePlayer1", fields: [player1Id], references: [id])
+  player2       User @relation("GameStatePlayer2", fields: [player2Id], references: [id])
+  currentPlayer User @relation("GameStateCurrentPlayer", fields: [currentPlayerId], references: [id])
+
+  @@index([gameId])
+  @@map("game_states")
+}
+
+// User statistics for performance tracking
+model UserStats {
+  userId      Int      @id @map("user_id")
+  totalGames  Int      @default(0) @map("total_games")
+  totalWins   Int      @default(0) @map("total_wins")
+  humansGames Int      @default(0) @map("humans_games")
+  humansWins  Int      @default(0) @map("humans_wins")
+  aliensGames Int      @default(0) @map("aliens_games")
+  aliensWins  Int      @default(0) @map("aliens_wins")
+  robotsGames Int      @default(0) @map("robots_games")
+  robotsWins  Int      @default(0) @map("robots_wins")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_stats")
+}
+
+// Enums
+enum Faction {
+  humans
+  aliens
+  robots
+}
+
+enum CardType {
+  unit
+  spell
+}
+
+enum GamePhase {
+  resources
+  draw
+  actions
+}
