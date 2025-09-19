@@ -406,14 +406,14 @@ services:
     ports:
       - "3000:3000"
     environment:
-      - REACT_APP_API_URL=http://backend:5000
+      - REACT_APP_API_URL=http://backend:5001
     depends_on:
       - backend
 
   backend:
     build: ./backend
     ports:
-      - "5000:5000"
+      - "5001:5001"
     environment:
       - DATABASE_URL=postgresql://tcg_user:password@postgres:5432/tcg_db
       - REDIS_URL=redis://redis:6379
@@ -579,7 +579,7 @@ extends Node
 var socket = WebSocketClient.new()
 
 func _ready():
-    socket.connect_to_url("ws://backend:5000")
+    socket.connect_to_url("ws://backend:5001")
     socket.connect("connection_established", _on_connection_established)
     socket.connect("data_received", _on_data_received)
 

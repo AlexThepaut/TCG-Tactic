@@ -1,0 +1,70 @@
+{
+  "name": "tcg-tactique",
+  "version": "1.0.0",
+  "description": "TCG Tactique - Tactical card game with real-time multiplayer and AI-generated cards",
+  "private": true,
+  "scripts": {
+    "dev": "docker-compose up",
+    "dev:detached": "docker-compose up -d",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:frontend": "cd frontend && npm run dev",
+    "build": "npm run build:backend && npm run build:frontend",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "test": "npm run test:backend && npm run test:frontend",
+    "test:backend": "cd backend && npm test",
+    "test:frontend": "cd frontend && npm test",
+    "lint": "npm run lint:backend && npm run lint:frontend",
+    "lint:backend": "cd backend && npm run lint",
+    "lint:frontend": "cd frontend && npm run lint",
+    "typecheck": "npm run typecheck:backend && npm run typecheck:frontend",
+    "typecheck:backend": "cd backend && npm run typecheck",
+    "typecheck:frontend": "cd frontend && npm run typecheck",
+    "clean": "docker-compose down -v",
+    "reset": "npm run clean && docker-compose up --build",
+    "logs": "docker-compose logs -f",
+    "logs:backend": "docker-compose logs -f backend",
+    "logs:frontend": "docker-compose logs -f frontend",
+    "db:migrate": "cd backend && npm run db:migrate",
+    "db:seed": "cd backend && npm run db:seed",
+    "db:reset": "cd backend && npm run db:reset",
+    "install:all": "npm install && cd backend && npm install && cd ../frontend && npm install",
+    "prod:build": "docker-compose -f docker-compose.prod.yml build",
+    "prod:up": "docker-compose -f docker-compose.prod.yml up -d",
+    "prod:down": "docker-compose -f docker-compose.prod.yml down"
+  },
+  "keywords": [
+    "tcg",
+    "tactical",
+    "card-game",
+    "multiplayer",
+    "real-time",
+    "ai-generated",
+    "socket.io",
+    "react",
+    "typescript",
+    "node.js"
+  ],
+  "author": "TCG Tactique Team",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "devDependencies": {
+    "concurrently": "^7.6.0",
+    "wait-on": "^7.0.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tcg-tactique/tcg-tactique.git"
+  },
+  "bugs": {
+    "url": "https://github.com/tcg-tactique/tcg-tactique/issues"
+  },
+  "homepage": "https://github.com/tcg-tactique/tcg-tactique#readme"
+}

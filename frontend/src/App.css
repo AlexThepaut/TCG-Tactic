@@ -1,0 +1,14 @@
+/* Additional app-specific styles */
+
+.card-formation {
+  @apply font-mono text-xs leading-tight;
+  letter-spacing: 0.1em;
+}
+
+.faction-card {
+  @apply transition-all duration-300 hover:scale-105 hover:shadow-lg;
+}
+
+.gradient-text {
+  @apply bg-gradient-to-r from-yellow-400 to-orange-500 bg-clip-text text-transparent;
+}

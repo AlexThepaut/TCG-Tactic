@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: tcg-postgres-prod
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_prod_data:/var/lib/postgresql/data
+    networks:
+      - tcg-network-prod
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tcg-redis-prod
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_prod_data:/data
+    networks:
+      - tcg-network-prod
+    restart: always
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: production
+    container_name: tcg-backend-prod
+    environment:
+      NODE_ENV: production
+      PORT: 5001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME}
+      DB_USER: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: ${JWT_SECRET}
+    ports:
+      - "5001:5001"
+    networks:
+      - tcg-network-prod
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: tcg-frontend-prod
+    environment:
+      NODE_ENV: production
+    ports:
+      - "3000:3000"
+    networks:
+      - tcg-network-prod
+    depends_on:
+      - backend
+    restart: always
+
+networks:
+  tcg-network-prod:
+    driver: bridge
+    name: tcg-network-prod
+
+volumes:
+  postgres_prod_data:
+    name: tcg-postgres-prod-data
+  redis_prod_data:
+    name: tcg-redis-prod-data

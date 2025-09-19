@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: tcg-postgres
+    environment:
+      POSTGRES_DB: tcg_tactique
+      POSTGRES_USER: tcg_user
+      POSTGRES_PASSWORD: tcg_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - tcg-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tcg_user -d tcg_tactique"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: tcg-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - tcg-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Backend Service
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      target: development
+    container_name: tcg-backend
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcg_tactique
+      DB_USER: tcg_user
+      DB_PASSWORD: tcg_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: development_jwt_secret_change_in_production
+    ports:
+      - "5001:5001"
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    networks:
+      - tcg-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: development
+    container_name: tcg-frontend
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:5001
+      VITE_WS_URL: ws://localhost:5001
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    networks:
+      - tcg-network
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+networks:
+  tcg-network:
+    driver: bridge
+    name: tcg-network
+
+volumes:
+  postgres_data:
+    name: tcg-postgres-data
+  redis_data:
+    name: tcg-redis-data
