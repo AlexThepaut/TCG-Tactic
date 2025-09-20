@@ -1,0 +1,94 @@
+# Development Dockerfile for TCG Tactique Backend
+FROM node:18-alpine AS development
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    postgresql-client \
+    redis \
+    dumb-init
+
+# Set working directory
+WORKDIR /app
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+# Copy package files
+COPY package*.json ./
+
+# Install dependencies (including dev dependencies)
+RUN npm install && npm cache clean --force
+
+# Copy Prisma schema first
+COPY prisma ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Create logs directory with proper permissions
+RUN mkdir -p logs && chown -R nodejs:nodejs logs
+
+# Copy source code
+COPY . .
+
+# Change ownership of the app directory
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose ports
+EXPOSE 5001 9229
+
+# Create entrypoint script
+COPY --chown=nodejs:nodejs <<'EOF' /app/entrypoint.dev.sh
+#!/bin/sh
+set -e
+
+echo "🚀 Starting TCG Tactique Backend (Development)"
+
+# Wait for database
+echo "⏳ Waiting for PostgreSQL..."
+until pg_isready -h postgres -p 5432 -U tcg_user -d tcg_tactique; do
+  echo "PostgreSQL is unavailable - sleeping"
+  sleep 2
+done
+echo "✅ PostgreSQL is ready!"
+
+# Wait for Redis
+echo "⏳ Waiting for Redis..."
+until redis-cli -h redis ping; do
+  echo "Redis is unavailable - sleeping"
+  sleep 2
+done
+echo "✅ Redis is ready!"
+
+# Run database migrations
+echo "🔄 Running database migrations..."
+npx prisma migrate deploy
+
+# Generate Prisma client (in case of changes)
+npx prisma generate
+
+# Seed database if needed
+if [ "$AUTO_SEED" = "true" ]; then
+  echo "🌱 Seeding database..."
+  npx prisma db seed
+fi
+
+# Start development server with hot reload
+echo "🎯 Starting development server..."
+exec npm run dev
+EOF
+
+RUN chmod +x /app/entrypoint.dev.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:5001/api/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["/app/entrypoint.dev.sh"]

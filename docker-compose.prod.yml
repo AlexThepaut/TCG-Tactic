@@ -9,41 +9,52 @@ services:
       POSTGRES_DB: ${DB_NAME}
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
-    ports:
-      - "5432:5432"
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     volumes:
-      - postgres_prod_data:/var/lib/postgresql/data
+      - postgres_data_prod:/var/lib/postgresql/data
+      - ./backend/scripts/init-prod.sql:/docker-entrypoint-initdb.d/init.sql
     networks:
       - tcg-network-prod
-    restart: always
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 60s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Redis Cache
   redis:
     image: redis:7-alpine
     container_name: tcg-redis-prod
-    ports:
-      - "6379:6379"
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_prod_data:/data
+      - redis_data_prod:/data
     networks:
       - tcg-network-prod
-    restart: always
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
+      interval: 30s
+      timeout: 10s
       retries: 5
+      start_period: 30s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Backend Service
   backend:
     build:
       context: ./backend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
       target: production
     container_name: tcg-backend-prod
     environment:
@@ -57,8 +68,11 @@ services:
       REDIS_HOST: redis
       REDIS_PORT: 6379
       JWT_SECRET: ${JWT_SECRET}
-    ports:
-      - "5001:5001"
+      OPENAI_API_KEY: ${OPENAI_API_KEY}
+      SESSION_SECRET: ${SESSION_SECRET}
+      CORS_ORIGIN: ${CORS_ORIGIN}
+    volumes:
+      - ./backend/logs:/app/logs
     networks:
       - tcg-network-prod
     depends_on:
@@ -66,29 +80,63 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    restart: always
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
       interval: 30s
       timeout: 10s
       retries: 3
+      start_period: 60s
+    restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   # Frontend Service
   frontend:
     build:
       context: ./frontend
-      dockerfile: Dockerfile
+      dockerfile: Dockerfile.prod
       target: production
     container_name: tcg-frontend-prod
-    environment:
-      NODE_ENV: production
     ports:
-      - "3000:3000"
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./frontend/nginx-prod.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
     networks:
       - tcg-network-prod
     depends_on:
       - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     restart: always
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  # Monitoring with Portainer (optional)
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: tcg-portainer
+    restart: always
+    ports:
+      - "9000:9000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - portainer_data:/data
+    networks:
+      - tcg-network-prod
+    profiles:
+      - monitoring
 
 networks:
   tcg-network-prod:
@@ -96,7 +144,9 @@ networks:
     name: tcg-network-prod
 
 volumes:
-  postgres_prod_data:
-    name: tcg-postgres-prod-data
-  redis_prod_data:
-    name: tcg-redis-prod-data
+  postgres_data_prod:
+    name: tcg-postgres-data-prod
+  redis_data_prod:
+    name: tcg-redis-data-prod
+  portainer_data:
+    name: tcg-portainer-data

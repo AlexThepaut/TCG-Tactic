@@ -4,16 +4,17 @@ services:
   # PostgreSQL Database
   postgres:
     image: postgres:15-alpine
-    container_name: tcg-postgres
+    container_name: tcg-postgres-dev
     environment:
       POSTGRES_DB: tcg_tactique
       POSTGRES_USER: tcg_user
       POSTGRES_PASSWORD: tcg_password
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256 --auth-local=scram-sha-256"
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./backend/scripts/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./backend/scripts:/docker-entrypoint-initdb.d
     networks:
       - tcg-network
     healthcheck:
@@ -21,11 +22,14 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    restart: unless-stopped
 
   # Redis Cache
   redis:
     image: redis:7-alpine
-    container_name: tcg-redis
+    container_name: tcg-redis-dev
+    command: redis-server --appendonly yes --replica-read-only no
     ports:
       - "6379:6379"
     volumes:
@@ -37,73 +41,99 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 10s
+    restart: unless-stopped
 
   # Backend Service
-  # backend:
-  #   build:
-  #     context: ./backend
-  #     dockerfile: Dockerfile
-  #     target: development
-  #   container_name: tcg-backend
-  #   environment:
-  #     NODE_ENV: development
-  #     PORT: 5001
-  #     DB_HOST: postgres
-  #     DB_PORT: 5432
-  #     DB_NAME: tcg_tactique
-  #     DB_USER: tcg_user
-  #     DB_PASSWORD: tcg_password
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #     JWT_SECRET: development_jwt_secret_change_in_production
-  #   ports:
-  #     - "5001:5001"
-  #   volumes:
-  #     - ./backend:/app
-  #     - /app/node_modules
-  #   networks:
-  #     - tcg-network
-  #   depends_on:
-  #     postgres:
-  #       condition: service_healthy
-  #     redis:
-  #       condition: service_healthy
-  #   healthcheck:
-  #     test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
-  #     interval: 30s
-  #     timeout: 10s
-  #     retries: 3
-  #   restart: unless-stopped
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: tcg-backend-dev
+    environment:
+      NODE_ENV: development
+      PORT: 5001
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: tcg_tactique
+      DB_USER: tcg_user
+      DB_PASSWORD: tcg_password
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      JWT_SECRET: development_jwt_secret_change_in_production
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      SESSION_SECRET: development_session_secret_change_in_production
+      CORS_ORIGIN: http://localhost:3000
+    ports:
+      - "5001:5001"
+      - "9229:9229"  # Debug port
+    volumes:
+      - ./backend:/app
+      - backend_node_modules:/app/node_modules
+      - ./backend/logs:/app/logs
+    networks:
+      - tcg-network
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
 
-  # # Frontend Service
-  # frontend:
-  #   build:
-  #     context: ./frontend
-  #     dockerfile: Dockerfile
-  #     target: development
-  #   container_name: tcg-frontend
-  #   environment:
-  #     NODE_ENV: development
-  #     VITE_API_URL: http://localhost:5001
-  #     VITE_WS_URL: ws://localhost:5001
-  #   ports:
-  #     - "3000:3000"
-  #   volumes:
-  #     - ./frontend:/app
-  #     - /app/node_modules
-  #   networks:
-  #     - tcg-network
-  #   depends_on:
-  #     - backend
-  #   restart: unless-stopped
+  # Frontend Service
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+      target: development
+    container_name: tcg-frontend-dev
+    environment:
+      NODE_ENV: development
+      VITE_API_URL: http://localhost:5001
+      VITE_WS_URL: ws://localhost:5001
+      VITE_APP_NAME: TCG Tactique
+      CHOKIDAR_USEPOLLING: true
+      WATCHPACK_POLLING: true
+    ports:
+      - "3000:3000"
+      - "24678:24678"  # Vite HMR port
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    networks:
+      - tcg-network
+    depends_on:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    restart: unless-stopped
+    stdin_open: true
+    tty: true
 
 networks:
   tcg-network:
     driver: bridge
-    name: tcg-network
+    name: tcg-network-dev
 
 volumes:
   postgres_data:
-    name: tcg-postgres-data
+    name: tcg-postgres-data-dev
   redis_data:
-    name: tcg-redis-data
+    name: tcg-redis-data-dev
+  backend_node_modules:
+    name: tcg-backend-node-modules-dev
+  frontend_node_modules:
+    name: tcg-frontend-node-modules-dev

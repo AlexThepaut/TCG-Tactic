@@ -208,4 +208,15 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
   }
 }));
 
+/**
+ * Simple status check for load balancers
+ * GET /health/status
+ */
+router.get('/status', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString()
+  });
+});
+
 export { router as healthRoutes };

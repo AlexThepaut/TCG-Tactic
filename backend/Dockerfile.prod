@@ -1,0 +1,111 @@
+# Production Dockerfile for TCG Tactique Backend
+FROM node:18-alpine AS base
+
+# Install system dependencies
+RUN apk add --no-cache \
+    curl \
+    postgresql-client \
+    redis \
+    dumb-init
+
+# Create non-root user
+RUN addgroup -g 1001 -S nodejs && \
+    adduser -S nodejs -u 1001
+
+WORKDIR /app
+
+# Development stage for building
+FROM base AS development
+
+# Copy package files
+COPY package*.json ./
+
+# Install all dependencies (including dev)
+RUN npm install && npm cache clean --force
+
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Generate Prisma client
+RUN npx prisma generate
+
+# Copy source code
+COPY . .
+
+# Build the application
+RUN npm run build
+
+# Production stage
+FROM base AS production
+
+# Copy package files
+COPY package*.json ./
+
+# Install only production dependencies
+RUN npm install --only=production && npm cache clean --force
+
+# Copy Prisma schema
+COPY prisma ./prisma/
+
+# Generate Prisma client for production
+RUN npx prisma generate
+
+# Copy built application from development stage
+COPY --from=development /app/dist ./dist
+
+# Copy additional required files
+COPY scripts ./scripts
+
+# Create logs directory
+RUN mkdir -p logs && chown -R nodejs:nodejs logs
+
+# Change ownership of the app directory
+RUN chown -R nodejs:nodejs /app
+
+# Switch to non-root user
+USER nodejs
+
+# Expose port
+EXPOSE 5001
+
+# Create production entrypoint script
+COPY --chown=nodejs:nodejs <<'EOF' /app/entrypoint.prod.sh
+#!/bin/sh
+set -e
+
+echo "🚀 Starting TCG Tactique Backend (Production)"
+
+# Wait for database
+echo "⏳ Waiting for PostgreSQL..."
+until pg_isready -h ${DB_HOST} -p ${DB_PORT} -U ${DB_USER} -d ${DB_NAME}; do
+  echo "PostgreSQL is unavailable - sleeping"
+  sleep 2
+done
+echo "✅ PostgreSQL is ready!"
+
+# Wait for Redis
+echo "⏳ Waiting for Redis..."
+until redis-cli -h ${REDIS_HOST} -p ${REDIS_PORT} ping; do
+  echo "Redis is unavailable - sleeping"
+  sleep 2
+done
+echo "✅ Redis is ready!"
+
+# Run database migrations
+echo "🔄 Running database migrations..."
+npx prisma migrate deploy
+
+# Start production server
+echo "🎯 Starting production server..."
+exec npm start
+EOF
+
+RUN chmod +x /app/entrypoint.prod.sh
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+  CMD curl -f http://localhost:5001/api/health || exit 1
+
+# Use dumb-init to handle signals properly
+ENTRYPOINT ["dumb-init", "--"]
+CMD ["/app/entrypoint.prod.sh"]
