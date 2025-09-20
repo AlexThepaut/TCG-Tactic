@@ -1,12 +1,15 @@
 /**
  * Health Monitoring Routes
- * Comprehensive health checks for database, system metrics, and service status
+ * Comprehensive health checks for database, system metrics, Socket.io, and service status
  */
 import { Router, Request, Response } from 'express';
 import { prisma } from '../lib/database';
 import { logger, loggers } from '../utils/logger';
 import { asyncHandler } from '../middleware/asyncHandler';
 import { env } from '../config/environment';
+import { SocketServer } from '../socket/socketServer';
+import { getQueueStatistics } from '../socket/handlers/matchmakingHandlers';
+import { getActiveSessions, getActiveGameRooms } from '../socket/handlers/connectionHandlers';
 
 const router = Router();
 
@@ -90,6 +93,7 @@ router.get('/detailed', asyncHandler(async (req: Request, res: Response) => {
     },
     checks: {
       database: { status: 'unknown' as 'healthy' | 'unhealthy' | 'unknown', responseTime: 0 },
+      socketio: { status: 'unknown' as 'healthy' | 'unhealthy' | 'unknown', responseTime: 0 },
       // redis: { status: 'unknown' as 'healthy' | 'unhealthy' | 'unknown', responseTime: 0 }
     }
   };
@@ -115,6 +119,34 @@ router.get('/detailed', asyncHandler(async (req: Request, res: Response) => {
     loggers.db.error('Database health check failed in detailed check', error);
   }
 
+  // Socket.io health check
+  try {
+    const socketStartTime = Date.now();
+    const socketServer = (req.app as any).socketServer as SocketServer;
+
+    if (socketServer) {
+      const socketHealth = socketServer.getHealthStatus();
+      const socketResponseTime = Date.now() - socketStartTime;
+
+      healthData.checks.socketio = {
+        status: socketHealth.connected ? 'healthy' : 'unhealthy',
+        responseTime: socketResponseTime
+      };
+    } else {
+      healthData.checks.socketio = {
+        status: 'unhealthy',
+        responseTime: Date.now() - startTime
+      };
+    }
+  } catch (error) {
+    healthData.status = healthData.status === 'healthy' ? 'degraded' : 'unhealthy';
+    healthData.checks.socketio = {
+      status: 'unhealthy',
+      responseTime: Date.now() - startTime
+    };
+    loggers.game.error('Socket.io health check failed in detailed check', error);
+  }
+
   // TODO: Add Redis health check when implemented
   // try {
   //   const redisStartTime = Date.now();
@@ -136,6 +168,10 @@ router.get('/detailed', asyncHandler(async (req: Request, res: Response) => {
   // Determine overall health status
   if (healthData.checks.database.status === 'unhealthy') {
     healthData.status = 'unhealthy';
+  }
+
+  if (healthData.checks.socketio.status === 'unhealthy') {
+    healthData.status = healthData.status === 'healthy' ? 'degraded' : 'unhealthy';
   }
 
   const statusCode = healthData.status === 'healthy' ? 200 : 503;
@@ -203,6 +239,67 @@ router.get('/stats', asyncHandler(async (req: Request, res: Response) => {
     res.status(503).json({
       status: 'error',
       message: 'Could not retrieve statistics',
+      timestamp: new Date().toISOString()
+    });
+  }
+}));
+
+/**
+ * Socket.io health and statistics check
+ * GET /health/socket
+ */
+router.get('/socket', asyncHandler(async (req: Request, res: Response): Promise<void> => {
+  try {
+    const socketServer = (req.app as any).socketServer as SocketServer;
+
+    if (!socketServer) {
+      res.status(503).json({
+        status: 'unhealthy',
+        error: 'Socket.io server not initialized',
+        timestamp: new Date().toISOString()
+      });
+      return;
+    }
+
+    const healthStatus = socketServer.getHealthStatus();
+    const connectionStats = socketServer.getStats();
+    const queueStats = getQueueStatistics();
+    const activeSessions = getActiveSessions();
+    const activeGameRooms = getActiveGameRooms();
+
+    res.status(200).json({
+      status: 'healthy',
+      socketio: {
+        connected: healthStatus.connected,
+        activeConnections: healthStatus.activeConnections,
+        totalRooms: healthStatus.totalRooms,
+        uptime: healthStatus.uptime,
+        memoryUsage: healthStatus.memoryUsage
+      },
+      statistics: {
+        connections: connectionStats,
+        matchmaking: {
+          queues: queueStats,
+          totalPlayersInQueue: Object.values(queueStats).reduce((sum, queue) => sum + queue.playerCount, 0)
+        },
+        sessions: {
+          activeSessions: activeSessions.length,
+          authenticatedSessions: activeSessions.filter(s => s.userId.startsWith('guest_') === false).length
+        },
+        games: {
+          activeGameRooms: activeGameRooms.length,
+          totalPlayersInGame: activeGameRooms.reduce((sum, room) => sum + room.playerCount, 0),
+          totalSpectators: activeGameRooms.reduce((sum, room) => sum + room.spectatorCount, 0)
+        }
+      },
+      timestamp: new Date().toISOString()
+    });
+
+  } catch (error) {
+    loggers.game.error('Socket.io health check failed', error);
+    res.status(503).json({
+      status: 'error',
+      error: 'Socket.io health check failed',
       timestamp: new Date().toISOString()
     });
   }

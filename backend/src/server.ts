@@ -1,11 +1,13 @@
 /**
  * Server Entry Point
- * Application startup with graceful shutdown handling and database connectivity
+ * Application startup with graceful shutdown handling, database connectivity, and Socket.io
  */
+import { createServer } from 'http';
 import { app } from './app';
 import { env } from './config/environment';
 import { logger, loggers } from './utils/logger';
 import { DatabaseService } from './lib/database';
+import { SocketServer } from './socket/socketServer';
 
 // Global error handlers for uncaught exceptions
 process.on('uncaughtException', (error: Error) => {
@@ -32,14 +34,27 @@ async function startServer() {
 
     loggers.db.info('Database connection successful');
 
-    // Start the HTTP server
-    const server = app.listen(env.PORT, () => {
+    // Create HTTP server
+    const httpServer = createServer(app);
+
+    // Initialize Socket.io server
+    logger.info('🔌 Initializing Socket.io server...');
+    const socketServer = new SocketServer(httpServer);
+    logger.info('✅ Socket.io server initialized successfully');
+
+    // Attach socket server to app for health checks
+    (app as any).socketServer = socketServer;
+
+    // Start the HTTP server with Socket.io
+    const server = httpServer.listen(env.PORT, () => {
       logger.info(`🚀 Server running on port ${env.PORT} in ${env.NODE_ENV} mode`);
       logger.info(`📊 Health checks available at:`);
       logger.info(`   - Basic: http://localhost:${env.PORT}/health`);
       logger.info(`   - Database: http://localhost:${env.PORT}/health/db`);
       logger.info(`   - Detailed: http://localhost:${env.PORT}/health/detailed`);
       logger.info(`   - Statistics: http://localhost:${env.PORT}/health/stats`);
+      logger.info(`   - Socket.io: http://localhost:${env.PORT}/health/socket`);
+      logger.info(`🌐 Socket.io server ready on port ${env.PORT}`);
 
       if (env.NODE_ENV === 'development') {
         logger.info(`🎮 Frontend URL: ${env.FRONTEND_URL}`);
@@ -65,6 +80,10 @@ async function startServer() {
         logger.info('✅ HTTP server closed');
 
         try {
+          // Close Socket.io server
+          await socketServer.shutdown();
+          logger.info('✅ Socket.io server closed');
+
           // Close database connections
           await DatabaseService.testConnection(); // This will close Prisma connections
           loggers.db.info('Database connections closed');
@@ -72,7 +91,7 @@ async function startServer() {
           logger.info('✅ Graceful shutdown completed');
           process.exit(0);
         } catch (error) {
-          logger.error('❌ Error during database cleanup:', error);
+          logger.error('❌ Error during cleanup:', error);
           process.exit(1);
         }
       });
@@ -98,6 +117,9 @@ async function startServer() {
         process.exit(1);
       }
     });
+
+    // Store socket server reference for health checks
+    (server as any).socketServer = socketServer;
 
     return server;
 
@@ -135,7 +157,7 @@ if (env.NODE_ENV === 'production') {
 }
 
 // Export server for testing
-export { startServer, healthCheck };
+export { startServer, healthCheck, SocketServer };
 
 // Start server if this file is run directly
 if (require.main === module) {

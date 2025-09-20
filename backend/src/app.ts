@@ -122,6 +122,9 @@ app.use((req, res, next) => {
 // API Routes
 app.use('/health', healthRoutes);
 
+// Socket.io server reference will be attached in server.ts
+// This allows health routes to access socket server instance
+
 // Root endpoint
 app.get('/', (req, res) => {
   res.json({
