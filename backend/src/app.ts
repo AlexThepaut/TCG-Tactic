@@ -17,6 +17,8 @@ import { env, isDevelopment } from './config/environment';
 import { logger, logStream, loggers } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
 import { healthRoutes } from './routes/health';
+import cardsRouter from './routes/cards';
+import factionsRouter from './routes/factions';
 
 // Create Express application
 const app = express();
@@ -121,6 +123,8 @@ app.use((req, res, next) => {
 
 // API Routes
 app.use('/health', healthRoutes);
+app.use('/api/cards', cardsRouter);
+app.use('/api/factions', factionsRouter);
 
 // Socket.io server reference will be attached in server.ts
 // This allows health routes to access socket server instance
@@ -136,7 +140,9 @@ app.get('/', (req, res) => {
       health: '/health',
       healthDetailed: '/health/detailed',
       healthDb: '/health/db',
-      healthStats: '/health/stats'
+      healthStats: '/health/stats',
+      cards: '/api/cards',
+      factions: '/api/factions'
     }
   });
 });

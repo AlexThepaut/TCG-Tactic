@@ -34,26 +34,56 @@ model User {
 
 // Active cards pool (240-360 cards in rotation)
 model ActiveCard {
-  id        Int      @id @default(autoincrement())
-  name      String   @db.VarChar(100)
-  faction   Faction
-  type      CardType
-  cost      Int      @db.SmallInt // 1-10 Void Echoes
-  attack    Int?     @db.SmallInt // NULL for spells
-  hp        Int?     @db.SmallInt // NULL for spells
-  range     String?  @db.VarChar(10) // e.g., "1-2", "3" for units
-  effects   String[] // Array of effects
-  setId     String   @map("set_id") @db.VarChar(20) // Rotation set identifier
-  createdAt DateTime @default(now()) @map("created_at")
+  id          String   @id @default(cuid())
+  name        String   @db.VarChar(100)
+  faction     Faction
+  type        CardType
+  cost        Int      @db.SmallInt // 1-10 Void Echoes
+  attack      Int?     @db.SmallInt // NULL for spells, 0-20 for units
+  hp          Int?     @db.SmallInt // NULL for spells, 1-20 for units
+  range       Int?     @db.SmallInt // Attack range 1-3 for units
+  abilities   Json     @default("[]") @db.JsonB // Array of card abilities
+  description String?  @db.Text
+  flavorText  String?  @map("flavor_text") @db.Text
+  imageUrl    String?  @map("image_url") @db.VarChar(255)
+  setId       String   @map("set_id") @db.VarChar(20) // Rotation set identifier
+  isActive    Boolean  @default(true) @map("is_active")
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
 
   // Relations
   deckCards DeckCard[]
 
+  // Constraints
   @@index([faction])
   @@index([type])
   @@index([cost])
   @@index([setId])
+  @@index([isActive])
   @@map("active_cards")
+}
+
+// Faction definitions with formations and passive abilities
+model FactionData {
+  id             String @id // 'humans', 'aliens', 'robots'
+  name           String @db.VarChar(50)
+  description    String @db.Text
+  formation      Json   @db.JsonB // 3x5 boolean grid
+  passiveAbility Json   @db.JsonB // Passive ability definition
+  colorTheme     String @db.VarChar(7) // Hex color code
+
+  @@map("factions")
+}
+
+// Card abilities reference table
+model CardAbility {
+  id          String @id @db.VarChar(50)
+  name        String @db.VarChar(100)
+  description String @db.Text
+  effectType  String @map("effect_type") @db.VarChar(30) // 'passive', 'triggered', 'activated'
+  parameters  Json   @default("{}") @db.JsonB
+
+  @@map("card_abilities")
 }
 
 // User decks (exactly 40 cards)
@@ -79,9 +109,9 @@ model Deck {
 
 // Cards in decks (max 4 per card)
 model DeckCard {
-  deckId   Int @map("deck_id")
-  cardId   Int @map("card_id")
-  quantity Int @db.SmallInt // 1-4 per card
+  deckId   Int    @map("deck_id")
+  cardId   String @map("card_id")
+  quantity Int    @db.SmallInt // 1-4 per card
 
   // Relations
   deck Deck       @relation(fields: [deckId], references: [id], onDelete: Cascade)

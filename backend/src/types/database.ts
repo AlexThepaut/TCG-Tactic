@@ -21,17 +21,22 @@ export interface User {
 
 // Card interface with strict typing
 export interface Card {
-  id: number;
+  id: string;
   name: string;
   faction: Faction;
   type: CardType;
   cost: number; // 1-10 Void Echoes
-  attack?: number; // Units only (1-20)
-  hp?: number; // Units only (1-30)
-  range?: string; // Units only, e.g. "1-2", "3", "1-5"
-  effects: string[]; // Array of effect keywords
-  set_id: string; // Rotation set identifier
-  created_at: Date;
+  attack?: number; // Units only (0-20)
+  hp?: number; // Units only (1-20)
+  range?: number; // Attack range (1-3)
+  abilities: CardAbility[]; // Array of card abilities
+  description?: string;
+  flavorText?: string;
+  imageUrl?: string;
+  setId: string; // Rotation set identifier
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 // Deck interface with validation constraints
@@ -49,7 +54,7 @@ export interface Deck {
 // Deck card junction table
 export interface DeckCard {
   deck_id: number;
-  card_id: number;
+  card_id: string;
   quantity: number; // 1-4 per card
   card?: Card; // Optional populated card data
 }
@@ -138,13 +143,32 @@ export interface Quest {
   completion_check: string; // JSON condition for validation
 }
 
-// Card effect definitions
-export interface CardEffect {
-  keyword: string;
+// Faction data with formations and passive abilities
+export interface FactionData {
+  id: Faction;
+  name: string;
   description: string;
-  faction?: Faction; // Some effects are faction-specific
-  triggers: string[]; // When effect activates
-  parameters?: Record<string, any>; // Effect-specific parameters
+  formation: boolean[][]; // 3x5 grid, true = playable position
+  passiveAbility: PassiveAbility;
+  colorTheme: string; // Hex color code
+}
+
+// Passive ability definition
+export interface PassiveAbility {
+  id: string;
+  name: string;
+  description: string;
+  effectType: 'passive' | 'triggered' | 'activated';
+  parameters: Record<string, any>;
+}
+
+// Card ability definition
+export interface CardAbility {
+  id: string;
+  name: string;
+  description: string;
+  effectType: 'passive' | 'triggered' | 'activated';
+  parameters: Record<string, any>;
 }
 
 // Database query result types for common operations
@@ -225,8 +249,8 @@ export function isValidEndReason(value: string): value is EndReason {
 
 // Utility types for API responses
 export type CreateUserRequest = Pick<User, 'username' | 'email'> & { password: string };
-export type CreateDeckRequest = Pick<Deck, 'name' | 'faction'> & { cards: { card_id: number; quantity: number }[] };
-export type UpdateDeckRequest = Partial<Pick<Deck, 'name'>> & { cards?: { card_id: number; quantity: number }[] };
+export type CreateDeckRequest = Pick<Deck, 'name' | 'faction'> & { cards: { card_id: string; quantity: number }[] };
+export type UpdateDeckRequest = Partial<Pick<Deck, 'name'>> & { cards?: { card_id: string; quantity: number }[] };
 
 export type ApiResponse<T> = {
   success: boolean;

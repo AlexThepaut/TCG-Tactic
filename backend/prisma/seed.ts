@@ -1,4 +1,7 @@
 import { PrismaClient } from '@prisma/client';
+import { FACTION_SEED_DATA, FACTION_IDS } from './seed-factions';
+import { CARD_ABILITIES_SEED_DATA } from './seed-abilities';
+import { ALL_CARD_SEED_DATA } from './seed-cards';
 
 const prisma = new PrismaClient();
 
@@ -12,9 +15,36 @@ async function main() {
   await prisma.deck.deleteMany();
   await prisma.userStats.deleteMany();
   await prisma.activeCard.deleteMany();
+  await prisma.cardAbility.deleteMany();
+  await prisma.factionData.deleteMany();
   await prisma.user.deleteMany();
 
   console.log('🗑️ Cleared existing data');
+
+  // Seed faction data
+  console.log('🏴 Seeding faction data...');
+  await Promise.all(
+    FACTION_IDS.map((factionId, index) =>
+      prisma.factionData.create({
+        data: {
+          id: factionId,
+          ...FACTION_SEED_DATA[index]
+        }
+      })
+    )
+  );
+  console.log('✅ Created 3 factions with formations and passive abilities');
+
+  // Seed card abilities
+  console.log('🔮 Seeding card abilities...');
+  await Promise.all(
+    CARD_ABILITIES_SEED_DATA.map(ability =>
+      prisma.cardAbility.create({
+        data: ability
+      })
+    )
+  );
+  console.log(`✅ Created ${CARD_ABILITIES_SEED_DATA.length} card abilities`);
 
   // Create test users
   const testUsers = await Promise.all([
@@ -43,193 +73,28 @@ async function main() {
 
   console.log('👥 Created test users');
 
-  // Create test cards (5 per faction = 15 total)
-  const testCards = await Promise.all([
-    // HUMANS - Disciplined faction focused on formation and coordination
-    prisma.activeCard.create({
-      data: {
-        name: 'Imperial Guard',
-        faction: 'humans',
-        type: 'unit',
-        cost: 2,
-        attack: 2,
-        hp: 3,
-        range: '1',
-        effects: ['Disciplined', 'Formation Fighter'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Heavy Bolter Squad',
-        faction: 'humans',
-        type: 'unit',
-        cost: 4,
-        attack: 3,
-        hp: 2,
-        range: '1-3',
-        effects: ['Suppression', 'Line Breaker'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Space Marine Captain',
-        faction: 'humans',
-        type: 'unit',
-        cost: 6,
-        attack: 4,
-        hp: 5,
-        range: '1-2',
-        effects: ['Leadership', 'Tactical Genius', 'Ultimate Rampart'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Tactical Strike',
-        faction: 'humans',
-        type: 'spell',
-        cost: 3,
-        effects: ['Deal 2 damage', 'Formation Bonus'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Fortify Position',
-        faction: 'humans',
-        type: 'spell',
-        cost: 2,
-        effects: ['Give +0/+2 to all units in formation', 'Defensive Stance'],
-        setId: 'test-set-1',
-      },
-    }),
+  // Seed comprehensive card set (120 cards total)
+  console.log('🃏 Seeding comprehensive card set...');
 
-    // ALIENS - Adaptive faction focused on evolution and swarm tactics
-    prisma.activeCard.create({
-      data: {
-        name: 'Ripper Swarm',
-        faction: 'aliens',
-        type: 'unit',
-        cost: 1,
-        attack: 1,
-        hp: 1,
-        range: '1',
-        effects: ['Spawning', 'Quick Adaptation'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Genestealer',
-        faction: 'aliens',
-        type: 'unit',
-        cost: 3,
-        attack: 3,
-        hp: 2,
-        range: '1',
-        effects: ['Infiltration', 'Evolutionary Adaptation'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Hive Tyrant',
-        faction: 'aliens',
-        type: 'unit',
-        cost: 7,
-        attack: 5,
-        hp: 6,
-        range: '1-2',
-        effects: ['Hive Mind', 'Synapse Creature', 'Living Swarm'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Biomass Absorption',
-        faction: 'aliens',
-        type: 'spell',
-        cost: 2,
-        effects: ['Gain resources from dead aliens', 'Evolutionary Boost'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Swarm Tactics',
-        faction: 'aliens',
-        type: 'spell',
-        cost: 4,
-        effects: ['Summon 2 Ripper Swarms', 'Overwhelm'],
-        setId: 'test-set-1',
-      },
-    }),
+  const createdCards = [];
+  for (const cardData of ALL_CARD_SEED_DATA) {
+    const card = await prisma.activeCard.create({
+      data: cardData
+    });
+    createdCards.push(card);
+  }
 
-    // ROBOTS - Persistent faction focused on technology and resurrection
-    prisma.activeCard.create({
-      data: {
-        name: 'Necron Warrior',
-        faction: 'robots',
-        type: 'unit',
-        cost: 3,
-        attack: 2,
-        hp: 3,
-        range: '1-2',
-        effects: ['Reanimation Protocols', 'Gauss Weapon'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Scarab Destroyer',
-        faction: 'robots',
-        type: 'unit',
-        cost: 2,
-        attack: 1,
-        hp: 2,
-        range: '1',
-        effects: ['Self-Repair', 'Swarm Intelligence'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Necron Lord',
-        faction: 'robots',
-        type: 'unit',
-        cost: 8,
-        attack: 6,
-        hp: 7,
-        range: '1-3',
-        effects: ['Resurrection Orb', 'Phase Out', 'Immortal Army'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Reanimation',
-        faction: 'robots',
-        type: 'spell',
-        cost: 3,
-        effects: ['Resurrect destroyed robot', 'Improved Protocols'],
-        setId: 'test-set-1',
-      },
-    }),
-    prisma.activeCard.create({
-      data: {
-        name: 'Gauss Barrage',
-        faction: 'robots',
-        type: 'spell',
-        cost: 5,
-        effects: ['Deal 1 damage to all enemies', 'Phase Technology'],
-        setId: 'test-set-1',
-      },
-    }),
-  ]);
+  // Group cards by faction for stats
+  const cardsByFaction = {
+    humans: createdCards.filter(c => c.faction === 'humans').length,
+    aliens: createdCards.filter(c => c.faction === 'aliens').length,
+    robots: createdCards.filter(c => c.faction === 'robots').length
+  };
 
-  console.log('🃏 Created 15 test cards (5 per faction)');
+  console.log(`✅ Created ${createdCards.length} cards total:`);
+  console.log(`  🔵 Humans: ${cardsByFaction.humans} cards`);
+  console.log(`  🟢 Aliens: ${cardsByFaction.aliens} cards`);
+  console.log(`  🔴 Robots: ${cardsByFaction.robots} cards`);
 
   // Create test decks
   const humanDeck = await prisma.deck.create({
@@ -261,71 +126,55 @@ async function main() {
 
   console.log('📦 Created test decks');
 
-  // Add cards to human deck (exactly 40 cards)
-  const humanCards = testCards.filter(card => card.faction === 'humans');
-  // Safe array access: we know we created exactly 5 human cards above
-  // Note: DeckCard uses composite key [deckId, cardId], so only one entry per card with quantity
-  await Promise.all([
-    prisma.deckCard.create({
-      data: { deckId: humanDeck.id, cardId: humanCards[0]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: humanDeck.id, cardId: humanCards[1]!.id, quantity: 3 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: humanDeck.id, cardId: humanCards[2]!.id, quantity: 2 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: humanDeck.id, cardId: humanCards[3]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: humanDeck.id, cardId: humanCards[4]!.id, quantity: 3 }
-    }),
-  ]);
+  // Add cards to decks - create balanced sample decks
+  const humanCards = createdCards.filter(card => card.faction === 'humans');
+  const alienCards = createdCards.filter(card => card.faction === 'aliens');
+  const robotCards = createdCards.filter(card => card.faction === 'robots');
 
-  // Add cards to alien deck (exactly 40 cards)
-  const alienCards = testCards.filter(card => card.faction === 'aliens');
-  // Safe array access: we know we created exactly 5 alien cards above
-  await Promise.all([
-    prisma.deckCard.create({
-      data: { deckId: alienDeck.id, cardId: alienCards[0]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: alienDeck.id, cardId: alienCards[1]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: alienDeck.id, cardId: alienCards[2]!.id, quantity: 2 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: alienDeck.id, cardId: alienCards[3]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: alienDeck.id, cardId: alienCards[4]!.id, quantity: 2 }
-    }),
-  ]);
+  // Helper function to create a balanced deck with exactly 40 cards
+  const createBalancedDeck = async (deckId: number, cards: any[]) => {
+    // Sort cards by cost for balanced distribution
+    const sortedCards = cards.sort((a, b) => a.cost - b.cost);
+    const deckCards: { cardId: string; quantity: number }[] = [];
+    let totalCards = 0;
 
-  // Add cards to robot deck (exactly 40 cards)
-  const robotCards = testCards.filter(card => card.faction === 'robots');
-  // Safe array access: we know we created exactly 5 robot cards above
-  await Promise.all([
-    prisma.deckCard.create({
-      data: { deckId: robotDeck.id, cardId: robotCards[0]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: robotDeck.id, cardId: robotCards[1]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: robotDeck.id, cardId: robotCards[2]!.id, quantity: 1 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: robotDeck.id, cardId: robotCards[3]!.id, quantity: 4 }
-    }),
-    prisma.deckCard.create({
-      data: { deckId: robotDeck.id, cardId: robotCards[4]!.id, quantity: 3 }
-    }),
-  ]);
+    // Add cards with quantity based on cost (cheaper cards get more copies)
+    for (const card of sortedCards) {
+      let quantity = 0;
+      if (card.cost <= 2) quantity = 4;
+      else if (card.cost <= 4) quantity = 3;
+      else if (card.cost <= 6) quantity = 2;
+      else quantity = 1;
 
-  console.log('🎴 Added cards to decks (should trigger validation)');
+      // Ensure we don't exceed 40 cards
+      if (totalCards + quantity > 40) {
+        quantity = 40 - totalCards;
+      }
+
+      if (quantity > 0) {
+        deckCards.push({ cardId: card.id, quantity });
+        totalCards += quantity;
+      }
+
+      if (totalCards >= 40) break;
+    }
+
+    // Create deck cards
+    await Promise.all(
+      deckCards.map(({ cardId, quantity }) =>
+        prisma.deckCard.create({
+          data: { deckId, cardId, quantity }
+        })
+      )
+    );
+  };
+
+  // Create balanced decks for each faction
+  await createBalancedDeck(humanDeck.id, humanCards);
+  await createBalancedDeck(alienDeck.id, alienCards);
+  await createBalancedDeck(robotDeck.id, robotCards);
+
+  console.log('🎴 Added cards to decks with balanced distribution');
 
   // Create a test game
   const testGame = await prisma.game.create({

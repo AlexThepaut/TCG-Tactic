@@ -80,6 +80,8 @@ export const loggers = {
   db: {
     info: (message: string, meta?: any) => logger.info(`[DB] ${message}`, meta),
     error: (message: string, error?: any) => logger.error(`[DB] ${message}`, { error: error?.message || error }),
+    warn: (message: string, meta?: any) => logger.warn(`[DB] ${message}`, meta),
+    debug: (message: string, meta?: any) => logger.debug(`[DB] ${message}`, meta),
     query: (query: string, duration?: number) =>
       logger.debug(`[DB] Query executed`, { query, duration: duration ? `${duration}ms` : undefined })
   },
@@ -87,13 +89,17 @@ export const loggers = {
   // HTTP requests
   http: {
     info: (message: string, meta?: any) => logger.info(`[HTTP] ${message}`, meta),
-    error: (message: string, error?: any) => logger.error(`[HTTP] ${message}`, { error: error?.message || error })
+    error: (message: string, error?: any) => logger.error(`[HTTP] ${message}`, { error: error?.message || error }),
+    warn: (message: string, meta?: any) => logger.warn(`[HTTP] ${message}`, meta),
+    debug: (message: string, meta?: any) => logger.debug(`[HTTP] ${message}`, meta)
   },
 
   // Game events (for future use)
   game: {
     info: (message: string, meta?: any) => logger.info(`[GAME] ${message}`, meta),
     error: (message: string, error?: any) => logger.error(`[GAME] ${message}`, { error: error?.message || error }),
+    warn: (message: string, meta?: any) => logger.warn(`[GAME] ${message}`, meta),
+    debug: (message: string, meta?: any) => logger.debug(`[GAME] ${message}`, meta),
     event: (event: string, data?: any) => logger.info(`[GAME EVENT] ${event}`, data)
   },
 
@@ -101,6 +107,8 @@ export const loggers = {
   auth: {
     info: (message: string, meta?: any) => logger.info(`[AUTH] ${message}`, meta),
     error: (message: string, error?: any) => logger.error(`[AUTH] ${message}`, { error: error?.message || error }),
+    warn: (message: string, meta?: any) => logger.warn(`[AUTH] ${message}`, meta),
+    debug: (message: string, meta?: any) => logger.debug(`[AUTH] ${message}`, meta),
     login: (userId: string, success: boolean) =>
       logger.info(`[AUTH] Login ${success ? 'successful' : 'failed'}`, { userId, success })
   }

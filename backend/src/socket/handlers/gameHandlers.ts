@@ -1,6 +1,6 @@
 /**
  * Game Event Handlers
- * Core game mechanics: create, join, place units, attack, turn management
+ * Integrated with comprehensive game state management services
  */
 import { Server as SocketIOServer } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
@@ -13,9 +13,6 @@ import {
   ServerToClientEvents,
   InterServerEvents,
   SocketData,
-  GameState,
-  PlayerData,
-  GameCreateConfig,
   GameResponse,
   GameActionResponse,
   BasicResponse,
@@ -28,8 +25,23 @@ import {
   GamePosition
 } from '../../types/socket';
 
-// In-memory game storage (will be replaced with database service later)
-const activeGames = new Map<string, GameState>();
+// Import new game state management services
+import {
+  GameState,
+  PlayerState,
+  GameConfig,
+  PlaceUnitActionData,
+  AttackActionData,
+  CastSpellActionData,
+  GameActionType,
+  GAME_CONSTANTS
+} from '../../types/gameState';
+import { gameStateService } from '../../services/gameStateService';
+import { gameValidationService } from '../../services/gameValidationService';
+import { gameMechanicsService } from '../../services/gameMechanicsService';
+import { questService } from '../../services/questService';
+
+// Game timeout management
 const gameTimeouts = new Map<string, NodeJS.Timeout>();
 
 /**
@@ -82,12 +94,12 @@ export function setupGameHandlers(
 /**
  * Handle game creation
  */
-function handleGameCreate(
+async function handleGameCreate(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
-  gameConfig: GameCreateConfig,
+  gameConfig: any, // Legacy type, will convert to new format
   callback: (response: GameResponse) => void
-): void {
+): Promise<void> {
   try {
     const userInfo = getUserInfo(socket);
 
@@ -95,15 +107,6 @@ function handleGameCreate(
       return callback({
         success: false,
         error: 'Authentication required to create game'
-      });
-    }
-
-    // Validate game configuration
-    const validationError = validateGameConfig(gameConfig);
-    if (validationError) {
-      return callback({
-        success: false,
-        error: validationError
       });
     }
 
@@ -115,69 +118,58 @@ function handleGameCreate(
       });
     }
 
-    const gameId = uuidv4();
-    const userId = socket.userData.userId;
+    const userId = parseInt(socket.userData.userId);
 
-    // Create player data
-    const playerData: PlayerData = {
-      id: userId,
-      username: socket.userData.username,
-      faction: gameConfig.faction,
-      hand: [], // Will be populated when game starts
-      board: Array(3).fill(null).map(() => Array(5).fill(null)), // 3x5 grid
-      resources: 0,
-      questId: generateRandomQuest(gameConfig.faction),
-      isReady: false,
-      lastActionAt: new Date()
-    };
-
-    // Create game state
-    const gameState: GameState = {
-      id: gameId,
-      status: 'waiting',
-      players: {
-        player1: playerData,
-        player2: null as any // Will be set when second player joins
+    // Convert legacy config to new format
+    const newGameConfig: GameConfig = {
+      timeLimit: gameConfig.timeLimit || GAME_CONSTANTS.DEFAULT_TIME_LIMIT,
+      maxTurns: GAME_CONSTANTS.MAX_TURNS,
+      questTimeout: GAME_CONSTANTS.QUEST_TIMEOUT,
+      spectatorMode: gameConfig.spectatorMode || false,
+      ranked: gameConfig.ranked || false,
+      player1Config: {
+        userId: userId,
+        faction: gameConfig.faction,
+        deckId: 1 // TODO: Get from actual deck selection
       },
-      currentPlayer: userId,
-      turn: 0,
-      phase: 'resources',
-      timeLimit: gameConfig.timeLimit,
-      timeRemaining: gameConfig.timeLimit,
-      gameStartedAt: new Date(),
-      lastActionAt: new Date(),
-      gameOver: false,
-      spectators: gameConfig.spectatorMode ? [] : []
+      player2Config: {
+        userId: 0, // Will be set when player 2 joins
+        faction: 'humans', // Will be set when player 2 joins
+        deckId: 1
+      }
     };
 
-    // Store game
-    activeGames.set(gameId, gameState);
+    // Create game state using service
+    const gameState = await gameStateService.createGameState(newGameConfig);
 
     // Join socket to game room
-    socket.gameId = gameId;
-    socket.playerId = userId;
-    socket.join(`game:${gameId}`);
-    socket.join(`game:${gameId}:players`);
+    socket.gameId = gameState.id;
+    socket.playerId = userId.toString();
+    socket.join(`game:${gameState.id}`);
+    socket.join(`game:${gameState.id}:players`);
 
     // Add to game room tracking
-    addUserToGameRoom(userId, gameId, true);
+    addUserToGameRoom(userId.toString(), gameState.id, true);
 
     loggers.game.info('Game created successfully', {
       ...userInfo,
-      gameId,
-      gameConfig
+      gameId: gameState.id,
+      gameConfig: newGameConfig
     });
+
+    // Convert to legacy format for response
+    const legacyGameState = convertToLegacyFormat(gameState);
 
     callback({
       success: true,
       message: 'Game created successfully',
-      gameId,
-      gameState,
-      playerId: userId
+      gameId: gameState.id,
+      gameState: legacyGameState as any,
+      playerId: userId.toString()
     });
 
     // Broadcast game creation (for matchmaking service)
-    io.emit('game:created' as any, { gameId, creator: userId });
+    io.emit('game:created' as any, { gameId: gameState.id, creator: userId });
 
   } catch (error: any) {
     loggers.game.error('Game creation failed', {
@@ -197,12 +189,12 @@ function handleGameCreate(
 /**
  * Handle joining a game
  */
-function handleGameJoin(
+async function handleGameJoin(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   gameId: string,
   callback: (response: GameResponse) => void
-): void {
+): Promise<void> {
   try {
     const userInfo = getUserInfo(socket);
 
@@ -221,7 +213,7 @@ function handleGameJoin(
       });
     }
 
-    const gameState = activeGames.get(gameId);
+    const gameState = await gameStateService.getGameState(gameId);
     if (!gameState) {
       return callback({
         success: false,
@@ -236,10 +228,10 @@ function handleGameJoin(
       });
     }
 
-    const userId = socket.userData.userId;
+    const userId = parseInt(socket.userData.userId);
 
-    // Check if game is full
-    if (gameState.players.player2) {
+    // Check if game is full (both players assigned)
+    if (gameState.player2Id !== 0) {
       return callback({
         success: false,
         error: 'Game is full'
@@ -247,53 +239,52 @@ function handleGameJoin(
     }
 
     // Check if user is trying to join their own game
-    if (gameState.players.player1.id === userId) {
+    if (gameState.player1Id === userId) {
       return callback({
         success: false,
         error: 'Cannot join your own game'
       });
     }
 
-    // TODO: Validate deck and faction when deck system is implemented
-    const playerData: PlayerData = {
-      id: userId,
-      username: socket.userData.username,
-      faction: 'humans', // TODO: Get from user's deck selection
-      hand: [],
-      board: Array(3).fill(null).map(() => Array(5).fill(null)),
-      resources: 0,
-      questId: generateRandomQuest('humans'), // TODO: Use actual faction
-      isReady: false,
-      lastActionAt: new Date()
-    };
-
-    // Add player to game
-    gameState.players.player2 = playerData;
-    gameState.lastActionAt = new Date();
+    // Update game config for player 2
+    const updatedState = await gameStateService.updateGameState(gameId, {
+      player2Id: userId,
+      players: {
+        ...gameState.players,
+        player2: {
+          ...gameState.players.player2,
+          id: userId,
+          username: socket.userData.username,
+          faction: 'aliens' // TODO: Get from user's deck selection
+        }
+      }
+    }, gameState.version);
 
     // Join socket to game room
     socket.gameId = gameId;
-    socket.playerId = userId;
+    socket.playerId = userId.toString();
     socket.join(`game:${gameId}`);
     socket.join(`game:${gameId}:players`);
 
     // Add to game room tracking
-    addUserToGameRoom(userId, gameId, true);
+    addUserToGameRoom(userId.toString(), gameId, true);
 
     // Notify other players
-    socket.to(`game:${gameId}`).emit('game:player_joined', playerData);
+    socket.to(`game:${gameId}`).emit('game:player_joined', convertPlayerToLegacy(updatedState.players.player2));
 
     loggers.game.info('Player joined game', {
       ...userInfo,
       gameId
     });
 
+    const legacyState = convertToLegacyFormat(updatedState);
+
     callback({
       success: true,
       message: 'Joined game successfully',
       gameId,
-      gameState,
-      playerId: userId
+      gameState: legacyState as any,
+      playerId: userId.toString()
     });
 
   } catch (error: any) {
@@ -315,11 +306,11 @@ function handleGameJoin(
 /**
  * Handle leaving a game
  */
-function handleGameLeave(
+async function handleGameLeave(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   callback: (response: BasicResponse) => void
-): void {
+): Promise<void> {
   try {
     const userInfo = getUserInfo(socket);
 
@@ -349,14 +340,21 @@ function handleGameLeave(
     delete socket.playerId;
 
     // Handle game cleanup
-    const gameState = activeGames.get(gameId);
+    const gameState = await gameStateService.getGameState(gameId);
     if (gameState) {
       if (gameState.status === 'active') {
         // End game if it was active
-        endGame(gameId, io, 'player_left');
+        await gameStateService.updateGameState(gameId, {
+          gameOver: true,
+          winner: gameState.currentPlayer === parseInt(userId) ?
+            (gameState.player1Id === parseInt(userId) ? gameState.player2Id : gameState.player1Id) :
+            gameState.currentPlayer,
+          winCondition: 'opponent_disconnected',
+          status: 'completed'
+        });
       } else {
         // Remove game if it was waiting
-        activeGames.delete(gameId);
+        await gameStateService.deleteGameState(gameId);
         clearGameTimeout(gameId);
       }
     }
@@ -387,11 +385,11 @@ function handleGameLeave(
 /**
  * Handle player ready status
  */
-function handleGameReady(
+async function handleGameReady(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   callback: (response: BasicResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'ready')) {
       return callback({
@@ -400,7 +398,7 @@ function handleGameReady(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState) {
       return callback({
         success: false,
@@ -408,13 +406,14 @@ function handleGameReady(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // Set player ready
-    if (gameState.players.player1.id === userId) {
-      gameState.players.player1.isReady = true;
-    } else if (gameState.players.player2?.id === userId) {
-      gameState.players.player2.isReady = true;
+    // Update player ready status
+    const updatedPlayers = { ...gameState.players };
+    if (gameState.player1Id === userId) {
+      updatedPlayers.player1.isReady = true;
+    } else if (gameState.player2Id === userId) {
+      updatedPlayers.player2.isReady = true;
     } else {
       return callback({
         success: false,
@@ -422,14 +421,30 @@ function handleGameReady(
       });
     }
 
-    // Check if both players are ready
-    if (gameState.players.player1.isReady &&
-        gameState.players.player2?.isReady) {
-      startGame(socket.gameId, io);
-    }
+    const updatedState = await gameStateService.updateGameState(socket.gameId, {
+      players: updatedPlayers
+    }, gameState.version);
 
-    // Broadcast updated game state
-    io.to(`game:${socket.gameId}`).emit('game:state_update', gameState);
+    // Check if both players are ready
+    if (updatedState.players.player1.isReady && updatedState.players.player2.isReady) {
+      // Start the game
+      const startedState = await gameStateService.updateGameState(socket.gameId, {
+        status: 'active',
+        turn: 1,
+        phase: 'resources'
+      }, updatedState.version);
+
+      // Set turn timeout
+      setTurnTimeout(socket.gameId, io);
+
+      // Broadcast game start
+      const legacyState = convertToLegacyFormat(startedState);
+      io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
+    } else {
+      // Broadcast updated ready state
+      const legacyState = convertToLegacyFormat(updatedState);
+      io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
+    }
 
     callback({
       success: true,
@@ -454,12 +469,12 @@ function handleGameReady(
 /**
  * Handle unit placement
  */
-function handlePlaceUnit(
+async function handlePlaceUnit(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   data: PlaceUnitData,
   callback: (response: GameActionResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'place_unit')) {
       return callback({
@@ -468,7 +483,7 @@ function handlePlaceUnit(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState || gameState.status !== 'active') {
       return callback({
         success: false,
@@ -476,46 +491,60 @@ function handlePlaceUnit(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // Validate it's player's turn
-    if (gameState.currentPlayer !== userId) {
-      return callback({
-        success: false,
-        error: 'Not your turn'
-      });
-    }
+    // Create action object
+    const actionData: PlaceUnitActionData = {
+      cardId: parseInt(data.cardId),
+      handIndex: data.handIndex,
+      position: { row: data.position.x, col: data.position.y },
+      resourceCost: 0 // Will be calculated by validation
+    };
 
-    // Validate game phase
-    if (gameState.phase !== 'actions') {
-      return callback({
-        success: false,
-        error: 'Cannot place units during this phase'
-      });
-    }
-
-    // TODO: Implement actual unit placement logic
-    // This is a placeholder that will be replaced with actual game logic
-
-    const action: GameAction = {
+    const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
       playerId: userId,
       type: 'place_unit',
-      data: data,
-      timestamp: new Date(),
       turn: gameState.turn,
-      phase: gameState.phase
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: actionData,
+      isValid: false,
+      resourceCost: 0,
+      involvedCards: []
     };
 
+    // Validate action
+    const validation = gameValidationService.validateAction(gameState, action);
+    if (!validation.isValid) {
+      return callback({
+        success: false,
+        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
+      });
+    }
+
+    // Execute action
+    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+
+    // Update game state
+    const updatedState = await gameStateService.updateGameState(
+      socket.gameId,
+      newState,
+      gameState.version
+    );
+
+    // Convert to legacy format for broadcast
+    const legacyState = convertToLegacyFormat(updatedState);
+
     // Broadcast action to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', action);
-    io.to(`game:${socket.gameId}`).emit('game:state_update', gameState);
+    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
+    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
 
     callback({
       success: true,
       message: 'Unit placed successfully',
-      gameState,
-      action
+      gameState: legacyState as any,
+      action: convertActionToLegacy(action)
     });
 
   } catch (error: any) {
@@ -537,12 +566,12 @@ function handlePlaceUnit(
 /**
  * Handle attack action
  */
-function handleAttack(
+async function handleAttack(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   data: AttackData,
   callback: (response: GameActionResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'attack')) {
       return callback({
@@ -551,7 +580,7 @@ function handleAttack(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState || gameState.status !== 'active') {
       return callback({
         success: false,
@@ -559,38 +588,59 @@ function handleAttack(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // Validate it's player's turn
-    if (gameState.currentPlayer !== userId) {
-      return callback({
-        success: false,
-        error: 'Not your turn'
-      });
-    }
+    // Create attack action
+    const actionData: AttackActionData = {
+      attackerPosition: { row: data.attackerPosition.x, col: data.attackerPosition.y },
+      targetPosition: { row: data.targetPosition.x, col: data.targetPosition.y },
+      attackType: 'normal'
+    };
 
-    // TODO: Implement actual attack logic
-    // This is a placeholder that will be replaced with actual game logic
-
-    const action: GameAction = {
+    const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
       playerId: userId,
       type: 'attack',
-      data: data,
-      timestamp: new Date(),
       turn: gameState.turn,
-      phase: gameState.phase
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: actionData,
+      isValid: false,
+      resourceCost: 0,
+      involvedCards: []
     };
 
+    // Validate action
+    const validation = gameValidationService.validateAction(gameState, action);
+    if (!validation.isValid) {
+      return callback({
+        success: false,
+        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
+      });
+    }
+
+    // Execute action
+    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+
+    // Update game state
+    const updatedState = await gameStateService.updateGameState(
+      socket.gameId,
+      newState,
+      gameState.version
+    );
+
+    // Convert to legacy format
+    const legacyState = convertToLegacyFormat(updatedState);
+
     // Broadcast action to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', action);
-    io.to(`game:${socket.gameId}`).emit('game:state_update', gameState);
+    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
+    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
 
     callback({
       success: true,
       message: 'Attack executed successfully',
-      gameState,
-      action
+      gameState: legacyState as any,
+      action: convertActionToLegacy(action)
     });
 
   } catch (error: any) {
@@ -612,12 +662,12 @@ function handleAttack(
 /**
  * Handle spell casting
  */
-function handleCastSpell(
+async function handleCastSpell(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   data: CastSpellData,
   callback: (response: GameActionResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'cast_spell')) {
       return callback({
@@ -626,7 +676,7 @@ function handleCastSpell(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState || gameState.status !== 'active') {
       return callback({
         success: false,
@@ -634,38 +684,50 @@ function handleCastSpell(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // Validate it's player's turn
-    if (gameState.currentPlayer !== userId) {
-      return callback({
-        success: false,
-        error: 'Not your turn'
-      });
-    }
+    // Create spell action
+    const actionData: CastSpellActionData = {
+      cardId: parseInt(data.cardId),
+      handIndex: data.handIndex,
+      targets: data.targets ? data.targets.map(t => ({ row: t.x, col: t.y })) : [],
+      resourceCost: 0 // Will be calculated by validation
+    };
 
-    // TODO: Implement actual spell casting logic
-    // This is a placeholder that will be replaced with actual game logic
-
-    const action: GameAction = {
+    const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
       playerId: userId,
       type: 'cast_spell',
-      data: data,
-      timestamp: new Date(),
       turn: gameState.turn,
-      phase: gameState.phase
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: actionData,
+      isValid: false,
+      resourceCost: 0,
+      involvedCards: []
     };
 
-    // Broadcast action to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', action);
-    io.to(`game:${socket.gameId}`).emit('game:state_update', gameState);
+    // Validate and execute action
+    const validation = gameValidationService.validateAction(gameState, action);
+    if (!validation.isValid) {
+      return callback({
+        success: false,
+        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
+      });
+    }
+
+    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+    const updatedState = await gameStateService.updateGameState(socket.gameId, newState, gameState.version);
+
+    const legacyState = convertToLegacyFormat(updatedState);
+    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
+    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
 
     callback({
       success: true,
       message: 'Spell cast successfully',
-      gameState,
-      action
+      gameState: legacyState as any,
+      action: convertActionToLegacy(action)
     });
 
   } catch (error: any) {
@@ -687,11 +749,11 @@ function handleCastSpell(
 /**
  * Handle end turn
  */
-function handleEndTurn(
+async function handleEndTurn(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   callback: (response: GameActionResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'end_turn')) {
       return callback({
@@ -700,7 +762,7 @@ function handleEndTurn(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState || gameState.status !== 'active') {
       return callback({
         success: false,
@@ -708,26 +770,46 @@ function handleEndTurn(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // Validate it's player's turn
-    if (gameState.currentPlayer !== userId) {
+    // Create end turn action
+    const action: import('../../types/gameState').GameAction = {
+      id: uuidv4(),
+      playerId: userId,
+      type: 'end_turn',
+      turn: gameState.turn,
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: {
+        phase: gameState.phase,
+        voluntaryEnd: true
+      },
+      isValid: false,
+      resourceCost: 0,
+      involvedCards: []
+    };
+
+    // Validate action
+    const validation = gameValidationService.validateAction(gameState, action);
+    if (!validation.isValid) {
       return callback({
         success: false,
-        error: 'Not your turn'
+        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
       });
     }
 
-    // Switch to next player
-    const nextPlayer = gameState.currentPlayer === gameState.players.player1.id
-      ? gameState.players.player2.id
-      : gameState.players.player1.id;
+    // Execute action
+    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
 
-    gameState.currentPlayer = nextPlayer;
-    gameState.turn++;
-    gameState.phase = 'resources'; // Reset to resources phase
-    gameState.timeRemaining = gameState.timeLimit;
-    gameState.lastActionAt = new Date();
+    // Progress to next phase if needed
+    const progressedState = gameMechanicsService.progressPhase(newState);
+
+    // Update game state
+    const updatedState = await gameStateService.updateGameState(
+      socket.gameId,
+      progressedState,
+      gameState.version
+    );
 
     // Clear any existing turn timeout
     clearGameTimeout(socket.gameId);
@@ -735,26 +817,19 @@ function handleEndTurn(
     // Set new turn timeout
     setTurnTimeout(socket.gameId, io);
 
-    const action: GameAction = {
-      id: uuidv4(),
-      playerId: userId,
-      type: 'end_turn',
-      data: {},
-      timestamp: new Date(),
-      turn: gameState.turn - 1, // Previous turn
-      phase: 'end'
-    };
+    // Convert to legacy format
+    const legacyState = convertToLegacyFormat(updatedState);
 
     // Broadcast turn change
-    io.to(`game:${socket.gameId}`).emit('game:turn_changed', nextPlayer, gameState.timeRemaining);
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', action);
-    io.to(`game:${socket.gameId}`).emit('game:state_update', gameState);
+    io.to(`game:${socket.gameId}`).emit('game:turn_changed', updatedState.currentPlayer.toString(), updatedState.timeRemaining);
+    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
+    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
 
     callback({
       success: true,
       message: 'Turn ended successfully',
-      gameState,
-      action
+      gameState: legacyState as any,
+      action: convertActionToLegacy(action)
     });
 
   } catch (error: any) {
@@ -775,11 +850,11 @@ function handleEndTurn(
 /**
  * Handle surrender
  */
-function handleSurrender(
+async function handleSurrender(
   socket: AuthenticatedSocket,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
   callback: (response: BasicResponse) => void
-): void {
+): Promise<void> {
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'surrender')) {
       return callback({
@@ -788,7 +863,7 @@ function handleSurrender(
       });
     }
 
-    const gameState = activeGames.get(socket.gameId);
+    const gameState = await gameStateService.getGameState(socket.gameId);
     if (!gameState || gameState.status !== 'active') {
       return callback({
         success: false,
@@ -796,10 +871,37 @@ function handleSurrender(
       });
     }
 
-    const userId = socket.userData?.userId || socket.id;
+    const userId = parseInt(socket.userData?.userId || '0');
 
-    // End game with surrender
-    endGame(socket.gameId!, io, 'surrender', userId);
+    // Create surrender action
+    const action: import('../../types/gameState').GameAction = {
+      id: uuidv4(),
+      playerId: userId,
+      type: 'surrender',
+      turn: gameState.turn,
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: { reason: 'voluntary_surrender' },
+      isValid: true,
+      resourceCost: 0,
+      involvedCards: []
+    };
+
+    // Execute surrender
+    const { newState } = gameMechanicsService.executeAction(gameState, action);
+    const updatedState = await gameStateService.updateGameState(socket.gameId, newState, gameState.version);
+
+    // Broadcast game end
+    const legacyState = convertToLegacyFormat(updatedState);
+    io.to(`game:${socket.gameId}`).emit('game:game_over', {
+      winner: updatedState.winner?.toString() || '',
+      loser: userId.toString(),
+      winCondition: 'opponent_surrender',
+      gameEndedAt: new Date(),
+      gameDuration: Date.now() - updatedState.gameStartedAt.getTime(),
+      totalTurns: updatedState.turn,
+      actions: []
+    });
 
     callback({
       success: true,
@@ -821,66 +923,7 @@ function handleSurrender(
   }
 }
 
-/**
- * Validate game configuration
- */
-function validateGameConfig(config: GameCreateConfig): string | null {
-  if (config.timeLimit < 30 || config.timeLimit > 300) {
-    return 'Time limit must be between 30 and 300 seconds';
-  }
-
-  if (!['humans', 'aliens', 'robots'].includes(config.faction)) {
-    return 'Invalid faction';
-  }
-
-  if (!config.deck || config.deck.length !== 40) {
-    return 'Deck must contain exactly 40 cards';
-  }
-
-  return null;
-}
-
-/**
- * Generate random quest for faction
- */
-function generateRandomQuest(faction: string): string {
-  const quests = {
-    humans: ['tactical_superiority', 'defensive_mastery', 'coordinated_strike'],
-    aliens: ['evolutionary_dominance', 'adaptive_survival', 'swarm_victory'],
-    robots: ['technological_supremacy', 'persistent_advance', 'systematic_elimination']
-  };
-
-  const factionQuests = quests[faction as keyof typeof quests] || quests.humans;
-  const randomIndex = Math.floor(Math.random() * factionQuests.length);
-  return factionQuests[randomIndex]!;
-}
-
-/**
- * Start the game
- */
-function startGame(
-  gameId: string,
-  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
-): void {
-  const gameState = activeGames.get(gameId);
-  if (!gameState) return;
-
-  gameState.status = 'active';
-  gameState.turn = 1;
-  gameState.phase = 'resources';
-  gameState.gameStartedAt = new Date();
-  gameState.lastActionAt = new Date();
-
-  // TODO: Deal initial cards, set starting resources, etc.
-
-  // Set turn timeout
-  setTurnTimeout(gameId, io);
-
-  // Broadcast game start
-  io.to(`game:${gameId}`).emit('game:state_update', gameState);
-
-  loggers.game.info('Game started', { gameId });
-}
+// Legacy functions removed - using new service-based architecture
 
 /**
  * Set turn timeout
@@ -889,11 +932,11 @@ function setTurnTimeout(
   gameId: string,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
 ): void {
-  const timeout = setTimeout(() => {
-    const gameState = activeGames.get(gameId);
+  const timeout = setTimeout(async () => {
+    const gameState = await gameStateService.getGameState(gameId);
     if (gameState && gameState.status === 'active') {
       // Auto-end turn for current player
-      endTurn(gameId, io, gameState.currentPlayer);
+      await autoEndTurn(gameId, io, gameState.currentPlayer);
     }
   }, 30000); // 30 second timeout for now
 
@@ -912,88 +955,104 @@ function clearGameTimeout(gameId: string): void {
 }
 
 /**
- * Auto end turn
+ * Auto end turn (timeout handler)
  */
-function endTurn(
+async function autoEndTurn(
   gameId: string,
   io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
-  playerId: string
-): void {
-  const gameState = activeGames.get(gameId);
-  if (!gameState) return;
+  playerId: number
+): Promise<void> {
+  try {
+    const gameState = await gameStateService.getGameState(gameId);
+    if (!gameState || gameState.currentPlayer !== playerId) return;
 
-  // Switch to next player
-  const nextPlayer = gameState.currentPlayer === gameState.players.player1.id
-    ? gameState.players.player2.id
-    : gameState.players.player1.id;
+    // Create automatic end turn action
+    const action: import('../../types/gameState').GameAction = {
+      id: uuidv4(),
+      playerId: playerId,
+      type: 'end_turn',
+      turn: gameState.turn,
+      phase: gameState.phase,
+      timestamp: new Date(),
+      data: { phase: gameState.phase, voluntaryEnd: false },
+      isValid: true,
+      resourceCost: 0,
+      involvedCards: []
+    };
 
-  gameState.currentPlayer = nextPlayer;
-  gameState.turn++;
-  gameState.timeRemaining = gameState.timeLimit;
+    // Execute end turn
+    const { newState } = gameMechanicsService.executeAction(gameState, action);
+    const progressedState = gameMechanicsService.progressPhase(newState);
+    const updatedState = await gameStateService.updateGameState(gameId, progressedState, gameState.version);
 
-  // Set new timeout
-  setTurnTimeout(gameId, io);
+    // Set new timeout for next player
+    setTurnTimeout(gameId, io);
 
-  // Broadcast turn change
-  io.to(`game:${gameId}`).emit('game:turn_changed', nextPlayer, gameState.timeRemaining);
-  io.to(`game:${gameId}`).emit('game:state_update', gameState);
+    // Broadcast turn change
+    const legacyState = convertToLegacyFormat(updatedState);
+    io.to(`game:${gameId}`).emit('game:turn_changed', updatedState.currentPlayer.toString(), updatedState.timeRemaining);
+    io.to(`game:${gameId}`).emit('game:state_update', legacyState as any);
+
+  } catch (error: any) {
+    loggers.game.error('Auto end turn failed', { gameId, playerId, error: error.message });
+  }
+}
+
+// Conversion functions for legacy compatibility
+
+/**
+ * Convert new GameState to legacy format for Socket.io compatibility
+ */
+function convertToLegacyFormat(gameState: GameState): any {
+  return {
+    id: gameState.id,
+    status: gameState.status,
+    players: {
+      player1: convertPlayerToLegacy(gameState.players.player1),
+      player2: convertPlayerToLegacy(gameState.players.player2)
+    },
+    currentPlayer: gameState.currentPlayer.toString(),
+    turn: gameState.turn,
+    phase: gameState.phase,
+    timeLimit: gameState.timeLimit,
+    timeRemaining: gameState.timeRemaining,
+    gameStartedAt: gameState.gameStartedAt,
+    lastActionAt: gameState.lastActionAt,
+    gameOver: gameState.gameOver,
+    winner: gameState.winner?.toString(),
+    winCondition: gameState.winCondition,
+    spectators: gameState.spectators
+  };
 }
 
 /**
- * End game
+ * Convert PlayerState to legacy format
  */
-function endGame(
-  gameId: string,
-  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
-  reason: string,
-  surrenderingPlayer?: string
-): void {
-  const gameState = activeGames.get(gameId);
-  if (!gameState) return;
-
-  let winner: string;
-  let winCondition: string;
-
-  if (reason === 'surrender' && surrenderingPlayer) {
-    winner = surrenderingPlayer === gameState.players.player1.id
-      ? gameState.players.player2.id
-      : gameState.players.player1.id;
-    winCondition = 'opponent_surrender';
-  } else if (reason === 'player_left') {
-    // TODO: Determine winner based on who left
-    winner = gameState.players.player1.id;
-    winCondition = 'opponent_disconnected';
-  } else {
-    // TODO: Implement actual win condition checking
-    winner = gameState.players.player1.id;
-    winCondition = 'quest_completed';
-  }
-
-  gameState.gameOver = true;
-  gameState.winner = winner;
-  gameState.winCondition = winCondition;
-  gameState.status = 'completed';
-
-  const result: GameResult = {
-    winner,
-    loser: winner === gameState.players.player1.id ? gameState.players.player2.id : gameState.players.player1.id,
-    winCondition,
-    gameEndedAt: new Date(),
-    gameDuration: Date.now() - gameState.gameStartedAt.getTime(),
-    totalTurns: gameState.turn,
-    actions: [] // TODO: Store action history
+function convertPlayerToLegacy(playerState: PlayerState): any {
+  return {
+    id: playerState.id.toString(),
+    username: playerState.username,
+    faction: playerState.faction,
+    hand: playerState.hand,
+    board: playerState.board,
+    resources: playerState.resources,
+    questId: playerState.questId,
+    isReady: playerState.isReady,
+    lastActionAt: new Date()
   };
+}
 
-  // Clear timeout
-  clearGameTimeout(gameId);
-
-  // Broadcast game end
-  io.to(`game:${gameId}`).emit('game:game_over', result);
-
-  // Clean up game
-  setTimeout(() => {
-    activeGames.delete(gameId);
-  }, 300000); // Keep for 5 minutes for reconnection
-
-  loggers.game.info('Game ended', { gameId, winner, winCondition, reason });
+/**
+ * Convert GameAction to legacy format
+ */
+function convertActionToLegacy(action: import('../../types/gameState').GameAction): any {
+  return {
+    id: action.id,
+    playerId: action.playerId.toString(),
+    type: action.type,
+    data: action.data,
+    timestamp: action.timestamp,
+    turn: action.turn,
+    phase: action.phase
+  };
 }
