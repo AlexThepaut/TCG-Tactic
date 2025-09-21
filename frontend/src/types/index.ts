@@ -58,6 +58,7 @@ export interface GameCard {
   type: 'unit' | 'spell';
   abilities: string[];
   imageUrl?: string;
+  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
 export interface PlayerData {
@@ -195,6 +196,64 @@ export interface SocketUserData {
   sessionId: string;
   connectedAt: Date;
 }
+
+// Drag & Drop Types
+export interface DragItem {
+  type: 'CARD';
+  id: string;
+  cardId: string;
+  handIndex: number;
+  card: GameCard;
+}
+
+export interface DropResult {
+  position: GamePosition;
+  isValid: boolean;
+  faction?: Faction;
+}
+
+export interface DragPreview {
+  card: GameCard;
+  isDragging: boolean;
+  canDrop: boolean;
+}
+
+// Formation definitions for each faction
+export interface Formation {
+  name: string;
+  positions: GamePosition[];
+  description: string;
+}
+
+export const FORMATIONS = {
+  humans: {
+    name: "Tactical Phalanx",
+    positions: [
+      { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 },
+      { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
+      { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }
+    ],
+    description: "3×3 center formation focused on discipline and coordination"
+  },
+  aliens: {
+    name: "Living Swarm",
+    positions: [
+      { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 },
+      { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+      { x: 2, y: 2 }
+    ],
+    description: "Adaptive spread formation for evolution and adaptation"
+  },
+  robots: {
+    name: "Immortal Army",
+    positions: [
+      { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
+      { x: 2, y: 1 },
+      { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }
+    ],
+    description: "Full top row with strategic support positions"
+  }
+};
 
 // Game Action Data Types
 export interface GameCreateConfig {

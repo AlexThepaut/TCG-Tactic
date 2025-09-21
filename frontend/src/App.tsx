@@ -18,7 +18,9 @@ function App() {
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
+            <Route path="/game/:gameId" element={<Game />} />
             <Route path="/game" element={<Game />} />
+            <Route path="/test/drag-drop" element={<Game />} />
             <Route path="/collection" element={<Collection />} />
             <Route path="/deck-builder" element={<DeckBuilder />} />
             <Route path="/profile" element={<Profile />} />

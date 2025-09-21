@@ -104,7 +104,7 @@ class SocketTester {
           });
           console.log('✅ Place unit response:', placeResponse);
         } catch (error) {
-          console.log('ℹ️ Place unit expected to fail (no real game):', error.message);
+          console.log('ℹ️ Place unit expected to fail (no real game):', error instanceof Error ? error.message : String(error));
         }
 
         // Test end turn
@@ -112,7 +112,7 @@ class SocketTester {
           const endTurnResponse = await this.socketService.endTurn();
           console.log('✅ End turn response:', endTurnResponse);
         } catch (error) {
-          console.log('ℹ️ End turn expected to fail (no real game):', error.message);
+          console.log('ℹ️ End turn expected to fail (no real game):', error instanceof Error ? error.message : String(error));
         }
       }
     } catch (error) {

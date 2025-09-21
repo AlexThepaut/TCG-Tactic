@@ -118,8 +118,36 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="mt-12 text-sm text-blue-300">
-          Ready to implement core game features!
+        {/* Testing Section */}
+        <div className="mt-12 bg-yellow-600/20 backdrop-blur-sm rounded-xl p-6 border border-yellow-500/30">
+          <h2 className="text-2xl font-semibold mb-4 text-yellow-400">🧪 Testing & Development</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Link
+              to="/test/drag-drop"
+              className="bg-yellow-700/20 hover:bg-yellow-700/30 rounded-lg p-4 border border-yellow-600/30 transition-all duration-300 hover:scale-105 group text-left"
+            >
+              <h3 className="text-lg font-semibold mb-2 text-yellow-300">🎯 Drag & Drop Test</h3>
+              <p className="text-yellow-200 text-sm">Test the tactical grid and card placement with mock data</p>
+            </Link>
+
+            <Link
+              to="/game/test-humans"
+              className="bg-humans-700/20 hover:bg-humans-700/30 rounded-lg p-4 border border-humans-600/30 transition-all duration-300 hover:scale-105 group text-left"
+            >
+              <h3 className="text-lg font-semibold mb-2 text-humans-300">🛡️ Test Humans Formation</h3>
+              <p className="text-humans-200 text-sm">Test with Humans faction (3×3 Tactical Phalanx)</p>
+            </Link>
+          </div>
+
+          <div className="mt-4 text-center">
+            <p className="text-yellow-300 text-sm">
+              Access: <code className="bg-black/30 px-2 py-1 rounded">http://localhost:3001/test/drag-drop</code>
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-8 text-sm text-blue-300">
+          Ready to test the drag & drop interface!
         </div>
       </div>
     </div>

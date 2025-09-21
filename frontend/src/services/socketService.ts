@@ -377,6 +377,13 @@ export class SocketService {
         return;
       }
 
+      // Check if already connected (fixes race condition)
+      if (this.socket.connected) {
+        console.log('Socket already connected, resolving immediately');
+        resolve();
+        return;
+      }
+
       const timeout = setTimeout(() => {
         reject(new Error('Connection timeout'));
       }, this.config.timeout || 10000);
@@ -391,7 +398,10 @@ export class SocketService {
         reject(error);
       });
 
-      this.socket.connect();
+      // Only connect if not already connecting/connected
+      if (!this.socket.connected && !this.connectionState.isConnecting) {
+        this.socket.connect();
+      }
     });
   }
 
