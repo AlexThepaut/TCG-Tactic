@@ -28,7 +28,11 @@ async function main() {
       prisma.factionData.create({
         data: {
           id: factionId,
-          ...FACTION_SEED_DATA[index]
+          name: FACTION_SEED_DATA[index]!.name!,
+          description: FACTION_SEED_DATA[index]!.description!,
+          formation: FACTION_SEED_DATA[index]!.formation!,
+          passiveAbility: FACTION_SEED_DATA[index]!.passiveAbility! as any,
+          colorTheme: FACTION_SEED_DATA[index]!.colorTheme!
         }
       })
     )
@@ -79,7 +83,20 @@ async function main() {
   const createdCards = [];
   for (const cardData of ALL_CARD_SEED_DATA) {
     const card = await prisma.activeCard.create({
-      data: cardData
+      data: {
+        name: cardData.name,
+        faction: cardData.faction,
+        type: cardData.type,
+        cost: cardData.cost,
+        attack: cardData.attack ?? null,
+        hp: cardData.hp ?? null,
+        range: cardData.range ?? null,
+        abilities: (cardData.abilities || []) as any,
+        description: cardData.description ?? null,
+        flavorText: cardData.flavorText ?? null,
+        setId: cardData.setId,
+        isActive: cardData.isActive
+      }
     });
     createdCards.push(card);
   }

@@ -52,7 +52,7 @@ export const FACTION_SEED_DATA: Omit<FactionData, 'id'>[] = [
       [false, true, true, true, false],
       [false, true, true, true, false]
     ],
-    passiveAbility: FACTION_PASSIVE_ABILITIES.humans,
+    passiveAbility: FACTION_PASSIVE_ABILITIES['humans']!,
     colorTheme: '#3B82F6' // Blue
   },
   {
@@ -64,7 +64,7 @@ export const FACTION_SEED_DATA: Omit<FactionData, 'id'>[] = [
       [true, true, true, true, true],
       [false, false, true, false, false]
     ],
-    passiveAbility: FACTION_PASSIVE_ABILITIES.aliens,
+    passiveAbility: FACTION_PASSIVE_ABILITIES['aliens']!,
     colorTheme: '#10B981' // Green
   },
   {
@@ -76,7 +76,7 @@ export const FACTION_SEED_DATA: Omit<FactionData, 'id'>[] = [
       [false, false, true, false, false],
       [false, true, true, true, false]
     ],
-    passiveAbility: FACTION_PASSIVE_ABILITIES.robots,
+    passiveAbility: FACTION_PASSIVE_ABILITIES['robots']!,
     colorTheme: '#EF4444' // Red
   }
 ];

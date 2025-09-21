@@ -6,7 +6,7 @@ import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { env, isDevelopment } from '../config/environment';
 import { logger, loggers } from '../utils/logger';
-import { socketAuthMiddleware, createRateLimitMiddleware } from '../middleware/socketAuth';
+import { socketAuthMiddleware, socketGuestMiddleware, createRateLimitMiddleware } from '../middleware/socketAuth';
 import {
   ClientToServerEvents,
   ServerToClientEvents,
@@ -117,8 +117,8 @@ export class SocketServer {
       maxRequests: isDevelopment ? 100 : 30 // Higher limit in development
     }));
 
-    // Authentication middleware
-    this.io.use(socketAuthMiddleware);
+    // Authentication middleware - use guest middleware in development for testing without auth
+    this.io.use(isDevelopment ? socketGuestMiddleware : socketAuthMiddleware);
 
     // Connection logging middleware
     this.io.use((socket: AuthenticatedSocket, next) => {

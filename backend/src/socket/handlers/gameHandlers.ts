@@ -40,6 +40,7 @@ import { gameStateService } from '../../services/gameStateService';
 import { gameValidationService } from '../../services/gameValidationService';
 import { gameMechanicsService } from '../../services/gameMechanicsService';
 import { questService } from '../../services/questService';
+import { placementService } from '../../services/placementService';
 
 // Game timeout management
 const gameTimeouts = new Map<string, NodeJS.Timeout>();
@@ -467,7 +468,7 @@ async function handleGameReady(
 }
 
 /**
- * Handle unit placement
+ * Handle unit placement with enhanced PlacementService integration
  */
 async function handlePlaceUnit(
   socket: AuthenticatedSocket,
@@ -483,82 +484,78 @@ async function handlePlaceUnit(
       });
     }
 
-    const gameState = await gameStateService.getGameState(socket.gameId);
-    if (!gameState || gameState.status !== 'active') {
-      return callback({
-        success: false,
-        error: 'Game not active'
-      });
-    }
-
     const userId = parseInt(socket.userData?.userId || '0');
+    const position = { row: data.position.x, col: data.position.y };
 
-    // Create action object
-    const actionData: PlaceUnitActionData = {
-      cardId: parseInt(data.cardId),
-      handIndex: data.handIndex,
-      position: { row: data.position.x, col: data.position.y },
-      resourceCost: 0 // Will be calculated by validation
-    };
+    loggers.game.info('Processing unit placement request', {
+      gameId: socket.gameId,
+      userId,
+      cardId: data.cardId,
+      position,
+      handIndex: data.handIndex
+    });
 
-    const action: import('../../types/gameState').GameAction = {
-      id: uuidv4(),
-      playerId: userId,
-      type: 'place_unit',
-      turn: gameState.turn,
-      phase: gameState.phase,
-      timestamp: new Date(),
-      data: actionData,
-      isValid: false,
-      resourceCost: 0,
-      involvedCards: []
-    };
-
-    // Validate action
-    const validation = gameValidationService.validateAction(gameState, action);
-    if (!validation.isValid) {
-      return callback({
-        success: false,
-        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
-      });
-    }
-
-    // Execute action
-    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
-
-    // Update game state
-    const updatedState = await gameStateService.updateGameState(
+    // Use PlacementService for comprehensive validation and execution
+    const placementResult = await placementService.executePlacement(
       socket.gameId,
-      newState,
-      gameState.version
+      userId,
+      data.cardId,
+      position
     );
 
-    // Convert to legacy format for broadcast
-    const legacyState = convertToLegacyFormat(updatedState);
+    if (!placementResult.success) {
+      loggers.game.warn('Unit placement failed', {
+        gameId: socket.gameId,
+        userId,
+        cardId: data.cardId,
+        position,
+        error: placementResult.error,
+        errorCode: placementResult.errorCode
+      });
 
-    // Broadcast action to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
+      return callback({
+        success: false,
+        error: placementResult.error || 'Unit placement failed'
+      });
+    }
+
+    // Convert to legacy format for broadcast
+    const legacyState = convertToLegacyFormat(placementResult.gameState!);
+    const legacyAction = placementResult.action ? convertActionToLegacy(placementResult.action) : null;
+
+    // Broadcast placement success to all players
+    io.to(`game:${socket.gameId}`).emit('game:action_performed', legacyAction);
     io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
 
+    // Send detailed response to placing player
     callback({
       success: true,
       message: 'Unit placed successfully',
       gameState: legacyState as any,
-      action: convertActionToLegacy(action)
+      action: legacyAction
+    });
+
+    loggers.game.info('Unit placement completed successfully', {
+      gameId: socket.gameId,
+      userId,
+      cardId: data.cardId,
+      position,
+      resourceCost: placementResult.action?.resourceCost || 0
     });
 
   } catch (error: any) {
-    loggers.game.error('Place unit failed', {
+    loggers.game.error('Unit placement handler failed', {
       socketId: socket.id,
       userId: socket.userData?.userId || 'unknown',
       gameId: socket.gameId,
       data,
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
 
     callback({
       success: false,
-      error: 'Failed to place unit'
+      error: 'Failed to place unit due to server error'
     });
   }
 }

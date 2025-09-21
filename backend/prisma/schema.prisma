@@ -27,6 +27,7 @@ model User {
   gameStatesAsPlayer1 GameState[] @relation("GameStatePlayer1")
   gameStatesAsPlayer2 GameState[] @relation("GameStatePlayer2")
   gameStatesAsCurrent GameState[] @relation("GameStateCurrentPlayer")
+  gameActions   GameAction[] @relation("GameActionPlayer")
   userStats     UserStats?
 
   @@map("users")
@@ -141,6 +142,7 @@ model Game {
   player2Deck Deck        @relation("Player2Deck", fields: [player2DeckId], references: [id])
   winner      User?       @relation("Winner", fields: [winnerId], references: [id])
   gameStates  GameState[]
+  gameActions GameAction[]
 
   @@index([player1Id, player2Id])
   @@map("games")
@@ -157,15 +159,47 @@ model GameState {
   phase           GamePhase @default(resources)
   boardStateJson  Json      @map("board_state_json") @db.JsonB
   createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   // Relations
   game          Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
   player1       User @relation("GameStatePlayer1", fields: [player1Id], references: [id])
   player2       User @relation("GameStatePlayer2", fields: [player2Id], references: [id])
   currentPlayer User @relation("GameStateCurrentPlayer", fields: [currentPlayerId], references: [id])
+  gameActions   GameAction[]
 
   @@index([gameId])
+  @@index([gameId, turn])
   @@map("game_states")
+}
+
+// Game actions log for debugging, replay, and undo functionality
+model GameAction {
+  id               String   @id @default(cuid())
+  gameId           Int      @map("game_id")
+  gameStateId      Int      @map("game_state_id")
+  playerId         Int      @map("player_id")
+  actionType       String   @map("action_type") @db.VarChar(30)
+  actionData       Json     @map("action_data") @db.JsonB
+  gameStateBefore  Json?    @map("game_state_before") @db.JsonB
+  gameStateAfter   Json?    @map("game_state_after") @db.JsonB
+  turn             Int      @default(1)
+  phase            GamePhase @default(actions)
+  resourceCost     Int      @default(0) @map("resource_cost")
+  isValid          Boolean  @default(true) @map("is_valid")
+  validationErrors Json?    @map("validation_errors") @db.JsonB
+  timestamp        DateTime @default(now())
+
+  // Relations
+  game      Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameState GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  player    User      @relation("GameActionPlayer", fields: [playerId], references: [id])
+
+  @@index([gameId, turn])
+  @@index([playerId])
+  @@index([actionType])
+  @@index([timestamp])
+  @@map("game_actions")
 }
 
 // User statistics for performance tracking
