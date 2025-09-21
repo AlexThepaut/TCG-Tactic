@@ -8,6 +8,7 @@ export { default as Hand } from './Hand';
 export { default as Card } from './Card';
 export { default as GridCell } from './GridCell';
 export { default as DragPreview } from './DragPreview';
+export { default as PlayerPanel } from './PlayerPanel';
 
 // Re-export types for convenience
 export type { CardProps } from './Card';
@@ -15,3 +16,4 @@ export type { HandProps } from './Hand';
 export type { GridCellProps } from './GridCell';
 export type { GameBoardProps } from './GameBoard';
 export type { DragPreviewProps } from './DragPreview';
+export type { PlayerPanelProps } from './PlayerPanel';

@@ -2,15 +2,18 @@
  * Hand Component - Interactive card display with drag sources
  * Shows player's hand with resource management and selection
  */
-import React, { memo, useCallback, useState } from 'react';
+import React, { memo, useCallback, useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
-  EyeSlashIcon
+  EyeSlashIcon,
+  InformationCircleIcon
 } from '@heroicons/react/24/outline';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import { mobileOptimizations, cardTouchHelpers } from '@/utils/touchInteractions';
 import Card from './Card';
 import type { GameCard, Faction } from '@/types';
 
@@ -41,13 +44,29 @@ const Hand: React.FC<HandProps> = ({
   onCardDragEnd,
   onCardTouch
 }) => {
+  const layout = useResponsiveLayout();
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [showDetails, setShowDetails] = useState(!isCompact);
+  const [showDetails, setShowDetails] = useState(!isCompact && !layout.isMobile);
   const [scrollPosition, setScrollPosition] = useState(0);
 
   // Calculate hand statistics
   const playableCards = cards.filter(card => card.cost <= resources);
   const totalCost = cards.reduce((sum, card) => sum + card.cost, 0);
+
+  // Calculate card layout based on screen size
+  const cardLayout = useMemo(() => {
+    const { cardSize, isMobile, isTablet } = layout;
+    const maxVisibleCards = isMobile ? 3 : isTablet ? 4 : 5;
+    const cardGap = isMobile ? 4 : 8;
+
+    return {
+      cardWidth: cardSize.width,
+      cardHeight: cardSize.height,
+      maxVisible: maxVisibleCards,
+      gap: cardGap,
+      showScrollButtons: cards.length > maxVisibleCards,
+    };
+  }, [layout, cards.length]);
   const averageCost = cards.length > 0 ? Math.round(totalCost / cards.length * 10) / 10 : 0;
 
   // Handle card interactions
@@ -67,8 +86,14 @@ const Hand: React.FC<HandProps> = ({
 
   const handleCardTouch = useCallback((e: React.TouchEvent, card: GameCard, handIndex: number) => {
     if (!isMyTurn) return;
+
+    // Add haptic feedback for mobile
+    if (layout.isMobile) {
+      mobileOptimizations.hapticFeedback('light');
+    }
+
     onCardTouch?.(e, card, handIndex);
-  }, [isMyTurn, onCardTouch]);
+  }, [isMyTurn, onCardTouch, layout.isMobile]);
 
   // Scroll controls
   const canScrollLeft = scrollPosition > 0;
@@ -235,8 +260,9 @@ const Hand: React.FC<HandProps> = ({
             <button
               onClick={() => setShowDetails(!showDetails)}
               className={clsx(
-                "p-1 rounded transition-colors",
+                "p-2 rounded transition-colors touch-manipulation",
                 "hover:bg-white/10 active:bg-white/20",
+                layout.isMobile && mobileOptimizations.touchTarget,
                 styles.accent
               )}
               title={showDetails ? "Hide details" : "Show details"}
@@ -252,8 +278,9 @@ const Hand: React.FC<HandProps> = ({
             <button
               onClick={() => setIsCollapsed(!isCollapsed)}
               className={clsx(
-                "p-1 rounded transition-colors",
+                "p-2 rounded transition-colors touch-manipulation",
                 "hover:bg-white/10 active:bg-white/20",
+                layout.isMobile && mobileOptimizations.touchTarget,
                 styles.accent
               )}
               title={isCollapsed ? "Expand hand" : "Collapse hand"}
@@ -304,9 +331,11 @@ const Hand: React.FC<HandProps> = ({
                       onClick={scrollLeft}
                       disabled={!canScrollLeft}
                       className={clsx(
-                        "absolute left-0 top-1/2 -translate-y-1/2 z-10",
-                        "w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm",
+                        "absolute left-0 top-1/2 -translate-y-1/2 z-10 touch-manipulation",
+                        layout.isMobile ? "w-10 h-10" : "w-8 h-8",
+                        "rounded-full bg-black/50 backdrop-blur-sm",
                         "flex items-center justify-center transition-opacity",
+                        layout.isMobile && mobileOptimizations.touchTarget,
                         canScrollLeft ? "opacity-100 hover:bg-black/70" : "opacity-30"
                       )}
                     >
@@ -317,9 +346,11 @@ const Hand: React.FC<HandProps> = ({
                       onClick={scrollRight}
                       disabled={!canScrollRight}
                       className={clsx(
-                        "absolute right-0 top-1/2 -translate-y-1/2 z-10",
-                        "w-8 h-8 rounded-full bg-black/50 backdrop-blur-sm",
+                        "absolute right-0 top-1/2 -translate-y-1/2 z-10 touch-manipulation",
+                        layout.isMobile ? "w-10 h-10" : "w-8 h-8",
+                        "rounded-full bg-black/50 backdrop-blur-sm",
                         "flex items-center justify-center transition-opacity",
+                        layout.isMobile && mobileOptimizations.touchTarget,
                         canScrollRight ? "opacity-100 hover:bg-black/70" : "opacity-30"
                       )}
                     >
