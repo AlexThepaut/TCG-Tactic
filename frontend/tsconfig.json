@@ -32,6 +32,7 @@
       "@/pages/*": ["pages/*"],
       "@/services/*": ["services/*"],
       "@/hooks/*": ["hooks/*"],
+      "@/stores/*": ["stores/*"],
       "@/types/*": ["types/*"],
       "@/utils/*": ["utils/*"],
       "@/assets/*": ["../public/*"]

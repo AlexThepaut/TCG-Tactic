@@ -242,7 +242,7 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
             'grid-cols-3': faceToFace
           })}
           style={{
-            maxWidth: faceToFace ? '500px' : '800px',
+            maxWidth: faceToFace ? '25dvw' : '800px',
             aspectRatio: faceToFace ? '3/5' : '5/3'
           }}
         >

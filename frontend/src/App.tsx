@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-import ErrorBoundary from './components/ErrorBoundary';
+import { AppErrorBoundary, GameErrorBoundary } from './components/ErrorBoundary';
 import Layout from './components/Layout';
 
 // Pages
@@ -13,14 +13,36 @@ import Help from './pages/Help';
 
 function App() {
   return (
-    <ErrorBoundary>
+    <AppErrorBoundary>
       <Router>
         <Layout>
           <Routes>
             <Route path="/" element={<Home />} />
-            <Route path="/game/:gameId" element={<Game />} />
-            <Route path="/game" element={<Game />} />
-            <Route path="/test/drag-drop" element={<Game />} />
+            {/* Game routes wrapped with GameErrorBoundary for enhanced error handling */}
+            <Route
+              path="/game/:gameId"
+              element={
+                <GameErrorBoundary>
+                  <Game />
+                </GameErrorBoundary>
+              }
+            />
+            <Route
+              path="/game"
+              element={
+                <GameErrorBoundary>
+                  <Game />
+                </GameErrorBoundary>
+              }
+            />
+            <Route
+              path="/test/drag-drop"
+              element={
+                <GameErrorBoundary>
+                  <Game />
+                </GameErrorBoundary>
+              }
+            />
             <Route path="/collection" element={<Collection />} />
             <Route path="/deck-builder" element={<DeckBuilder />} />
             <Route path="/profile" element={<Profile />} />
@@ -55,7 +77,7 @@ function App() {
           }}
         />
       </Router>
-    </ErrorBoundary>
+    </AppErrorBoundary>
   );
 }
 
