@@ -75,26 +75,29 @@ const Navigation = () => {
   };
 
   return (
-    <nav className="bg-gray-900/95 backdrop-blur-sm border-b border-gray-700 sticky top-0 z-40">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+    <nav className="cyber-panel border-b-2 border-neon-cyan-500/30 sticky top-0 z-40 scanlines">
+      {/* Navigation glow effect */}
+      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-neon-cyan-500/5 to-transparent" />
+
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         <div className="flex justify-between h-16">
           {/* Logo and Brand */}
           <div className="flex items-center">
             <Link
               to="/"
-              className="flex items-center space-x-3 text-white hover:text-blue-400 transition-colors"
+              className="flex items-center space-x-4 text-neon-cyan-400 hover:text-neon-cyan-300 transition-all duration-300 group"
             >
-              <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center font-bold text-sm">
-                TCG
+              <div className="w-10 h-10 cyber-card-container rounded-xl flex items-center justify-center font-cyber font-bold text-sm neon-glow-cyan group-hover:scale-110 transition-transform duration-300">
+                <span className="neon-text-cyan">TCG</span>
               </div>
-              <span className="font-display font-bold text-xl">
-                TCG Tactique
+              <span className="font-cyber font-bold text-xl tracking-wider uppercase neon-text-cyan">
+                TCG TACTIQUE
               </span>
             </Link>
           </div>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-1">
+          <div className="hidden md:flex items-center space-x-2">
             {navigationItems.map((item) => {
               const isActive = isActiveRoute(item.href);
               const IconComponent = isActive ? item.iconSolid : item.icon;
@@ -104,13 +107,16 @@ const Navigation = () => {
                   key={item.name}
                   to={item.href}
                   className={clsx(
-                    'flex items-center px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200',
+                    'neon-button flex items-center px-5 py-3 rounded-xl text-sm font-bold font-cyber tracking-wider uppercase transition-all duration-300 group',
                     isActive
-                      ? 'bg-blue-600 text-white shadow-lg'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-800'
+                      ? 'text-neon-cyan-300 border-neon-cyan-300 neon-glow-cyan'
+                      : 'text-cyber-muted border-cyber-border hover:text-neon-cyan-400 hover:border-neon-cyan-400'
                   )}
                 >
-                  <IconComponent className="w-5 h-5 mr-2" />
+                  <IconComponent className={clsx(
+                    'w-5 h-5 mr-2 transition-all duration-300',
+                    isActive ? 'text-neon-cyan-300' : 'group-hover:text-neon-cyan-400'
+                  )} />
                   {item.name}
                 </Link>
               );
@@ -121,12 +127,12 @@ const Navigation = () => {
           <div className="md:hidden flex items-center">
             <button
               onClick={toggleMobileMenu}
-              className="text-gray-400 hover:text-white focus:outline-none focus:text-white transition-colors"
+              className="p-3 rounded-lg cyber-panel text-cyber-muted hover:text-neon-cyan-400 transition-all duration-300 hover:neon-glow-cyan group"
             >
               {isMobileMenuOpen ? (
-                <XMarkIcon className="h-6 w-6" />
+                <XMarkIcon className="h-6 w-6 group-hover:animate-spin" />
               ) : (
-                <Bars3Icon className="h-6 w-6" />
+                <Bars3Icon className="h-6 w-6 group-hover:animate-pulse" />
               )}
             </button>
           </div>
@@ -136,7 +142,11 @@ const Navigation = () => {
       {/* Mobile Navigation Menu */}
       {isMobileMenuOpen && (
         <div className="md:hidden">
-          <div className="px-2 pt-2 pb-3 space-y-1 bg-gray-800/95 backdrop-blur-sm border-t border-gray-700">
+          <div className="px-4 pt-4 pb-6 space-y-3 cyber-panel border-t-2 border-neon-cyan-500/30 relative">
+            {/* Mobile menu background effects */}
+            <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-b from-neon-cyan-500/5 to-transparent pointer-events-none" />
+
             {navigationItems.map((item) => {
               const isActive = isActiveRoute(item.href);
               const IconComponent = isActive ? item.iconSolid : item.icon;
@@ -147,13 +157,17 @@ const Navigation = () => {
                   to={item.href}
                   onClick={() => setIsMobileMenuOpen(false)}
                   className={clsx(
-                    'flex items-center px-3 py-2 rounded-md text-base font-medium transition-all duration-200',
+                    'flex items-center px-4 py-3 rounded-xl text-base font-bold font-cyber tracking-wider uppercase transition-all duration-300 relative z-10',
+                    'neon-button',
                     isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-300 hover:text-white hover:bg-gray-700'
+                      ? 'text-neon-cyan-300 border-neon-cyan-300 neon-glow-cyan'
+                      : 'text-cyber-muted border-cyber-border hover:text-neon-cyan-400 hover:border-neon-cyan-400'
                   )}
                 >
-                  <IconComponent className="w-6 h-6 mr-3" />
+                  <IconComponent className={clsx(
+                    'w-6 h-6 mr-3 transition-all duration-300',
+                    isActive ? 'text-neon-cyan-300' : 'hover:text-neon-cyan-400'
+                  )} />
                   {item.name}
                 </Link>
               );

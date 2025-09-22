@@ -14,12 +14,18 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   return (
     <DeviceOrientation>
-      <div className="min-h-screen bg-gradient-to-br from-gray-900 via-blue-900 to-purple-900">
+      <div className="min-h-screen bg-cyber-black relative overflow-hidden">
+        {/* Cyberpunk animated background */}
+        <div className="cyber-bg-pattern" />
+
+        {/* Matrix-style data rain for non-game screens */}
+        {!isGameScreen && <div className="data-rain" />}
+
         {/* Navigation - hidden on game screen */}
         {!isGameScreen && <Navigation />}
 
         {/* Main content */}
-        <main className={isGameScreen ? 'h-screen' : 'flex-1'}>
+        <main className={isGameScreen ? 'h-screen relative z-10' : 'flex-1 relative z-10'}>
           {children}
         </main>
       </div>

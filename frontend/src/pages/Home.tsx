@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { PlayIcon, RectangleStackIcon, WrenchScrewdriverIcon } from '@heroicons/react/24/outline';
+import clsx from 'clsx';
 
 const Home = () => {
   const [backendStatus, setBackendStatus] = useState<string>('Connecting...');
@@ -23,62 +24,147 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4">
-      <div className="text-center text-white max-w-4xl mx-auto">
+    <div className="min-h-screen flex flex-col justify-center items-center p-4 relative overflow-hidden">
+      {/* Central tech grid effect */}
+      <div className="absolute inset-0 tech-grid opacity-5 pointer-events-none" />
+
+      <div className="text-center text-white max-w-5xl mx-auto relative z-10">
         {/* Hero Section */}
-        <div className="mb-12">
-          <h1 className="text-6xl md:text-8xl font-bold mb-6 bg-gradient-to-r from-yellow-400 via-orange-500 to-red-500 bg-clip-text text-transparent">
-            TCG Tactique
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-blue-200">
-            Tactical card game with real-time multiplayer combat
-          </p>
+        <div className="mb-16 relative">
+          {/* Glitch text effect */}
+          <div className="relative">
+            <h1
+              className="text-6xl md:text-9xl font-cyber font-black mb-8 gradient-text-cyber energy-pulse"
+              data-text="TCG TACTIQUE"
+            >
+              TCG TACTIQUE
+            </h1>
+            {/* Scanning line overlay */}
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-cyan-400 to-transparent animate-scanline opacity-60" />
+          </div>
+
+          <div className="cyber-panel inline-block px-8 py-4 rounded-xl backdrop-blur-md">
+            <p className="text-lg md:text-xl font-sans tracking-wide neon-text-cyan">
+              TACTICAL CARD GAME WITH REAL-TIME MULTIPLAYER COMBAT
+            </p>
+          </div>
+
+          {/* Floating accent elements */}
+          <div className="absolute -top-10 -left-10 w-20 h-20 border-2 border-neon-cyan-400 rounded-full animate-neon-pulse opacity-30" />
+          <div className="absolute -bottom-10 -right-10 w-16 h-16 border-2 border-neon-pink-400 rounded-full animate-neon-pulse opacity-30" />
         </div>
 
         {/* System Status */}
-        <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 mb-12 border border-white/10">
-          <h2 className="text-2xl font-semibold mb-4 text-green-400">🚀 System Status</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
-            <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-              <span className="text-gray-300">Frontend:</span>
-              <span className="text-green-400 font-semibold">✅ Running on port 3000</span>
+        <div className="cyber-panel rounded-xl p-8 mb-16 relative overflow-hidden">
+          {/* Background tech grid */}
+          <div className="absolute inset-0 tech-grid opacity-20 pointer-events-none" />
+
+          <h2 className="text-3xl font-cyber font-bold mb-6 neon-text-green tracking-wider uppercase relative z-10">
+            ⚡ SYSTEM STATUS
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left relative z-10">
+            <div className="cyber-card-container p-5 rounded-lg holographic-border">
+              <div className="flex justify-between items-center">
+                <span className="font-cyber text-sm tracking-wider uppercase text-cyber-muted">FRONTEND:</span>
+                <span className="neon-text-green font-bold font-cyber">
+                  ⚡ ACTIVE PORT 3000
+                </span>
+              </div>
             </div>
-            <div className="flex justify-between items-center p-3 bg-white/5 rounded-lg">
-              <span className="text-gray-300">Backend:</span>
-              <span className={backendStatus.includes('✅') ? 'text-green-400' : 'text-red-400'}>
-                {backendStatus}
-              </span>
+
+            <div className="cyber-card-container p-5 rounded-lg holographic-border">
+              <div className="flex justify-between items-center">
+                <span className="font-cyber text-sm tracking-wider uppercase text-cyber-muted">BACKEND:</span>
+                <span className={clsx(
+                  'font-bold font-cyber',
+                  backendStatus.includes('✅') ? 'neon-text-green' : 'neon-text-red'
+                )}>
+                  {backendStatus.includes('✅') ? '⚡ ONLINE' : '❌ OFFLINE'}
+                </span>
+              </div>
             </div>
           </div>
+
+          {/* Scanning line */}
+          <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-green-400 to-transparent animate-scanline opacity-40" />
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
           <Link
             to="/game"
-            className="bg-green-600/20 hover:bg-green-600/30 backdrop-blur-sm rounded-xl p-6 border border-green-500/30 transition-all duration-300 hover:scale-105 group"
+            className="cyber-card-container rounded-xl p-8 relative overflow-hidden transition-all duration-500 hover:scale-110 group transform-gpu faction-card"
           >
-            <PlayIcon className="w-12 h-12 mx-auto mb-4 text-green-400 group-hover:text-green-300" />
-            <h3 className="text-xl font-semibold mb-2 text-green-300">Quick Play</h3>
-            <p className="text-green-200 text-sm">Jump into a match immediately</p>
+            {/* Background effects */}
+            <div className="absolute inset-0 holographic opacity-20" />
+            <div className="absolute inset-0 tech-grid opacity-10" />
+
+            <div className="relative z-10 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-xl cyber-panel flex items-center justify-center neon-glow-green group-hover:animate-neon-pulse">
+                <PlayIcon className="w-10 h-10 neon-text-green" />
+              </div>
+              <h3 className="text-2xl font-cyber font-bold mb-3 neon-text-green tracking-wider uppercase">
+                QUICK PLAY
+              </h3>
+              <p className="text-cyber-muted font-sans text-sm tracking-wide">
+                JUMP INTO A MATCH IMMEDIATELY
+              </p>
+            </div>
+
+            {/* Corner accents */}
+            <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-neon-green-400 opacity-60" />
+            <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-neon-green-400 opacity-60" />
           </Link>
 
           <Link
             to="/collection"
-            className="bg-blue-600/20 hover:bg-blue-600/30 backdrop-blur-sm rounded-xl p-6 border border-blue-500/30 transition-all duration-300 hover:scale-105 group"
+            className="cyber-card-container rounded-xl p-8 relative overflow-hidden transition-all duration-500 hover:scale-110 group transform-gpu faction-card"
           >
-            <RectangleStackIcon className="w-12 h-12 mx-auto mb-4 text-blue-400 group-hover:text-blue-300" />
-            <h3 className="text-xl font-semibold mb-2 text-blue-300">Collection</h3>
-            <p className="text-blue-200 text-sm">Browse all available cards</p>
+            {/* Background effects */}
+            <div className="absolute inset-0 holographic opacity-20" />
+            <div className="absolute inset-0 tech-grid opacity-10" />
+
+            <div className="relative z-10 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-xl cyber-panel flex items-center justify-center neon-glow-blue group-hover:animate-neon-pulse">
+                <RectangleStackIcon className="w-10 h-10 neon-text-blue" />
+              </div>
+              <h3 className="text-2xl font-cyber font-bold mb-3 neon-text-blue tracking-wider uppercase">
+                COLLECTION
+              </h3>
+              <p className="text-cyber-muted font-sans text-sm tracking-wide">
+                BROWSE ALL AVAILABLE CARDS
+              </p>
+            </div>
+
+            {/* Corner accents */}
+            <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-neon-blue-400 opacity-60" />
+            <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-neon-blue-400 opacity-60" />
           </Link>
 
           <Link
             to="/deck-builder"
-            className="bg-purple-600/20 hover:bg-purple-600/30 backdrop-blur-sm rounded-xl p-6 border border-purple-500/30 transition-all duration-300 hover:scale-105 group"
+            className="cyber-card-container rounded-xl p-8 relative overflow-hidden transition-all duration-500 hover:scale-110 group transform-gpu faction-card"
           >
-            <WrenchScrewdriverIcon className="w-12 h-12 mx-auto mb-4 text-purple-400 group-hover:text-purple-300" />
-            <h3 className="text-xl font-semibold mb-2 text-purple-300">Deck Builder</h3>
-            <p className="text-purple-200 text-sm">Create and customize decks</p>
+            {/* Background effects */}
+            <div className="absolute inset-0 holographic opacity-20" />
+            <div className="absolute inset-0 tech-grid opacity-10" />
+
+            <div className="relative z-10 text-center">
+              <div className="w-16 h-16 mx-auto mb-6 rounded-xl cyber-panel flex items-center justify-center neon-glow-pink group-hover:animate-neon-pulse">
+                <WrenchScrewdriverIcon className="w-10 h-10 neon-text-pink" />
+              </div>
+              <h3 className="text-2xl font-cyber font-bold mb-3 neon-text-pink tracking-wider uppercase">
+                DECK BUILDER
+              </h3>
+              <p className="text-cyber-muted font-sans text-sm tracking-wide">
+                CREATE AND CUSTOMIZE DECKS
+              </p>
+            </div>
+
+            {/* Corner accents */}
+            <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-neon-pink-400 opacity-60" />
+            <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-neon-pink-400 opacity-60" />
           </Link>
         </div>
       </div>

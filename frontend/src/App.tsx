@@ -14,9 +14,13 @@ import Help from './pages/Help';
 function App() {
   return (
     <AppErrorBoundary>
-      <Router>
-        <Layout>
-          <Routes>
+      <div className="relative min-h-screen bg-cyber-black overflow-hidden">
+        {/* Cyberpunk animated background */}
+        <div className="cyber-bg-pattern" />
+
+        <Router>
+          <Layout>
+            <Routes>
             <Route path="/" element={<Home />} />
             {/* Game routes wrapped with GameErrorBoundary for enhanced error handling */}
             <Route
@@ -52,31 +56,42 @@ function App() {
           </Routes>
         </Layout>
 
-        {/* Toast notifications */}
+        {/* Toast notifications - Cyberpunk styled */}
         <Toaster
           position="top-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#1f2937',
-              color: '#f3f4f6',
-              border: '1px solid #374151',
+              background: 'rgba(10, 10, 10, 0.9)',
+              color: '#00ffff',
+              border: '1px solid rgba(0, 255, 255, 0.3)',
+              borderRadius: '8px',
+              fontFamily: 'Orbitron, monospace',
+              fontWeight: 'bold',
+              backdropFilter: 'blur(10px)',
+              boxShadow: '0 0 20px rgba(0, 255, 255, 0.2)',
             },
             success: {
               style: {
-                background: '#065f46',
-                border: '1px solid #10b981',
+                background: 'rgba(0, 255, 102, 0.1)',
+                border: '1px solid #00ff66',
+                color: '#00ff66',
+                boxShadow: '0 0 20px rgba(0, 255, 102, 0.3)',
               },
             },
             error: {
               style: {
-                background: '#7f1d1d',
-                border: '1px solid #ef4444',
+                background: 'rgba(255, 68, 68, 0.1)',
+                border: '1px solid #ff4444',
+                color: '#ff4444',
+                boxShadow: '0 0 20px rgba(255, 68, 68, 0.3)',
               },
             },
           }}
         />
-      </Router>
+          </Layout>
+        </Router>
+      </div>
     </AppErrorBoundary>
   );
 }

@@ -1,4 +1,4 @@
-import { UserIcon, TrophyIcon, ChartBarIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { UserIcon, TrophyIcon, ChartBarIcon, CalendarIcon, ShieldCheckIcon } from '@heroicons/react/24/outline';
 
 const Profile = () => {
   // Mock user data
@@ -37,141 +37,203 @@ const Profile = () => {
   };
 
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-8 relative overflow-hidden">
+      {/* Background effects */}
+      <div className="absolute inset-0 tech-grid opacity-5 pointer-events-none" />
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Player Profile</h1>
-          <p className="text-gray-300">Track your progress and statistics</p>
+        <div className="mb-12 text-center">
+          <h1 className="text-5xl md:text-7xl font-cyber font-black mb-6 gradient-text-cyber tracking-wider uppercase">
+            🛡️ TACTICAL PROFILE
+          </h1>
+          <div className="cyber-panel inline-block px-6 py-3 rounded-xl">
+            <p className="font-sans tracking-wide neon-text-cyan">
+              MONITOR COMBAT PERFORMANCE AND STRATEGIC STATISTICS
+            </p>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Profile Information */}
           <div className="lg:col-span-1">
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-6">
-              <div className="text-center">
+            <div className="cyber-panel rounded-xl p-8 mb-8 relative overflow-hidden">
+              {/* Background effects */}
+              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+              <div className="absolute inset-0 holographic opacity-5 pointer-events-none" />
+
+              <div className="text-center relative z-10">
                 {/* Avatar */}
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <UserIcon className="w-12 h-12 text-white" />
+                <div className="w-32 h-32 mx-auto mb-6 rounded-xl cyber-panel flex items-center justify-center relative overflow-hidden neon-glow-cyan">
+                  <div className="absolute inset-0 holographic opacity-20" />
+                  <UserIcon className="w-16 h-16 neon-text-cyan relative z-10" />
                 </div>
-                
-                <h2 className="text-2xl font-bold text-white mb-2">{mockUser.username}</h2>
-                <p className="text-gray-400 mb-4">{mockUser.email}</p>
-                
-                <div className="flex items-center justify-center text-sm text-gray-400">
-                  <CalendarIcon className="w-4 h-4 mr-2" />
-                  Joined {new Date(mockUser.joinDate).toLocaleDateString()}
+
+                <h2 className="text-3xl font-cyber font-black mb-3 neon-text-cyan tracking-wider uppercase">
+                  {mockUser.username}
+                </h2>
+                <p className="text-cyber-muted mb-6 font-sans">{mockUser.email}</p>
+
+                <div className="cyber-card-container rounded-lg p-3 inline-flex items-center">
+                  <CalendarIcon className="w-5 h-5 mr-3 neon-text-green" />
+                  <span className="text-sm font-cyber tracking-wider uppercase text-neon-green-300">
+                    ENLISTED: {new Date(mockUser.joinDate).toLocaleDateString()}
+                  </span>
                 </div>
               </div>
+
+              {/* Corner accents */}
+              <div className="absolute top-2 left-2 w-6 h-6 border-l-2 border-t-2 border-neon-cyan-400 opacity-60" />
+              <div className="absolute bottom-2 right-2 w-6 h-6 border-r-2 border-b-2 border-neon-cyan-400 opacity-60" />
             </div>
 
             {/* Quick Stats */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <h3 className="text-lg font-semibold text-white mb-4">Quick Stats</h3>
-              
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">Current Rank</span>
-                  <span className="text-yellow-400 font-semibold">{mockStats.currentRank}</span>
+            <div className="cyber-panel rounded-xl p-6 relative overflow-hidden">
+              {/* Background effects */}
+              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+
+              <h3 className="text-xl font-cyber font-bold mb-6 neon-text-blue tracking-wider uppercase relative z-10">
+                ⚡ COMBAT STATUS
+              </h3>
+
+              <div className="space-y-6 relative z-10">
+                <div className="cyber-card-container rounded-lg p-4 flex justify-between items-center">
+                  <span className="text-cyber-muted font-cyber tracking-wider uppercase text-sm">CURRENT RANK</span>
+                  <span className="neon-text-yellow font-cyber font-bold tracking-wider">{mockStats.currentRank}</span>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">Favorite Faction</span>
-                  <span className={`text-${factionColors[mockStats.favoriteFaction]} font-semibold`}>
+
+                <div className="cyber-card-container rounded-lg p-4 flex justify-between items-center">
+                  <span className="text-cyber-muted font-cyber tracking-wider uppercase text-sm">FAVORED FACTION</span>
+                  <span className={`font-cyber font-bold tracking-wider ${
+                    mockStats.favoriteFaction === 'humans' ? 'neon-text-blue' :
+                    mockStats.favoriteFaction === 'aliens' ? 'neon-text-pink' :
+                    'neon-text-green'
+                  }`}>
                     {factionNames[mockStats.favoriteFaction]}
                   </span>
                 </div>
-                
-                <div className="flex justify-between items-center">
-                  <span className="text-gray-300">Total Play Time</span>
-                  <span className="text-blue-400 font-semibold">{mockStats.totalPlayTime}</span>
+
+                <div className="cyber-card-container rounded-lg p-4 flex justify-between items-center">
+                  <span className="text-cyber-muted font-cyber tracking-wider uppercase text-sm">COMBAT TIME</span>
+                  <span className="neon-text-cyan font-cyber font-bold tracking-wider">{mockStats.totalPlayTime}</span>
                 </div>
               </div>
+
+              {/* Scanning line */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-blue-400 to-transparent animate-scanline opacity-40" />
             </div>
           </div>
 
           {/* Statistics */}
           <div className="lg:col-span-2">
             {/* Win/Loss Stats */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10 mb-6">
-              <h3 className="text-xl font-semibold text-white mb-6 flex items-center">
-                <ChartBarIcon className="w-6 h-6 mr-2" />
-                Game Statistics
+            <div className="cyber-panel rounded-xl p-8 mb-8 relative overflow-hidden">
+              {/* Background effects */}
+              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+              <div className="absolute inset-0 holographic opacity-5 pointer-events-none" />
+
+              <h3 className="text-2xl font-cyber font-bold mb-8 flex items-center neon-text-green tracking-wider uppercase relative z-10">
+                <ChartBarIcon className="w-8 h-8 mr-3" />
+                TACTICAL ANALYTICS
               </h3>
               
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-blue-400 mb-2">{mockStats.gamesPlayed}</div>
-                  <div className="text-gray-300">Games Played</div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-8 relative z-10">
+                <div className="text-center cyber-card-container rounded-xl p-6 relative overflow-hidden">
+                  <div className="absolute inset-0 holographic opacity-10" />
+                  <div className="text-4xl font-cyber font-black neon-text-blue mb-3 relative z-10">{mockStats.gamesPlayed}</div>
+                  <div className="text-cyber-muted font-cyber tracking-wider uppercase text-sm relative z-10">ENGAGEMENTS</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-green-400 mb-2">{mockStats.gamesWon}</div>
-                  <div className="text-gray-300">Games Won</div>
+
+                <div className="text-center cyber-card-container rounded-xl p-6 relative overflow-hidden">
+                  <div className="absolute inset-0 holographic opacity-10" />
+                  <div className="text-4xl font-cyber font-black neon-text-green mb-3 relative z-10">{mockStats.gamesWon}</div>
+                  <div className="text-cyber-muted font-cyber tracking-wider uppercase text-sm relative z-10">VICTORIES</div>
                 </div>
-                
-                <div className="text-center">
-                  <div className="text-3xl font-bold text-yellow-400 mb-2">{mockStats.winRate}%</div>
-                  <div className="text-gray-300">Win Rate</div>
+
+                <div className="text-center cyber-card-container rounded-xl p-6 relative overflow-hidden">
+                  <div className="absolute inset-0 holographic opacity-10" />
+                  <div className="text-4xl font-cyber font-black neon-text-yellow mb-3 relative z-10">{mockStats.winRate}%</div>
+                  <div className="text-cyber-muted font-cyber tracking-wider uppercase text-sm relative z-10">SUCCESS RATE</div>
                 </div>
               </div>
 
               {/* Win Rate Progress Bar */}
-              <div className="mt-6">
-                <div className="flex justify-between text-sm text-gray-400 mb-2">
-                  <span>Win Rate Progress</span>
-                  <span>{mockStats.winRate}%</span>
+              <div className="mt-8 relative z-10">
+                <div className="flex justify-between text-sm mb-3">
+                  <span className="font-cyber tracking-wider uppercase text-cyber-muted">TACTICAL EFFICIENCY</span>
+                  <span className="font-cyber tracking-wider uppercase neon-text-yellow">{mockStats.winRate}%</span>
                 </div>
-                <div className="w-full bg-gray-700 rounded-full h-3">
-                  <div 
-                    className="bg-gradient-to-r from-green-500 to-yellow-500 h-3 rounded-full transition-all duration-500"
+                <div className="w-full cyber-card-container rounded-full h-4 overflow-hidden">
+                  <div
+                    className="bg-gradient-to-r from-neon-green-500 via-neon-cyan-400 to-neon-yellow-500 h-4 rounded-full transition-all duration-1000 neon-glow-green"
                     style={{ width: `${mockStats.winRate}%` }}
                   />
                 </div>
               </div>
+
+              {/* Scanning line */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-green-400 to-transparent animate-scanline opacity-40" />
             </div>
 
             {/* Recent Games */}
-            <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-              <h3 className="text-xl font-semibold text-white mb-6 flex items-center">
-                <TrophyIcon className="w-6 h-6 mr-2" />
-                Recent Games
+            <div className="cyber-panel rounded-xl p-8 relative overflow-hidden">
+              {/* Background effects */}
+              <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+
+              <h3 className="text-2xl font-cyber font-bold mb-8 flex items-center neon-text-pink tracking-wider uppercase relative z-10">
+                <TrophyIcon className="w-8 h-8 mr-3" />
+                RECENT ENGAGEMENTS
               </h3>
               
-              <div className="space-y-3">
+              <div className="space-y-4 relative z-10">
                 {mockRecentGames.map((game) => (
-                  <div key={game.id} className="bg-gray-800/50 rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-4">
-                      <div className={`w-3 h-3 rounded-full ${
-                        game.result === 'win' ? 'bg-green-500' : 'bg-red-500'
+                  <div key={game.id} className="cyber-card-container rounded-lg p-5 flex items-center justify-between relative overflow-hidden group">
+                    <div className="absolute inset-0 holographic opacity-5" />
+
+                    <div className="flex items-center gap-6 relative z-10">
+                      <div className={`w-4 h-4 rounded-full border-2 ${
+                        game.result === 'win'
+                          ? 'bg-neon-green-500 border-neon-green-400 neon-glow-green'
+                          : 'bg-neon-red-500 border-neon-red-400 neon-glow-red'
                       }`} />
-                      
+
                       <div>
-                        <div className="font-medium text-white">
-                          vs {game.opponent}
+                        <div className="font-cyber font-bold text-neon-cyan-300 tracking-wider uppercase">
+                          VS {game.opponent}
                         </div>
-                        <div className="text-sm text-gray-400">
+                        <div className="text-sm text-cyber-muted font-sans">
                           {factionNames[game.faction as keyof typeof factionNames]} • {new Date(game.date).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    
-                    <div className={`px-3 py-1 rounded-full text-sm font-medium ${
-                      game.result === 'win' 
-                        ? 'bg-green-600/20 text-green-400 border border-green-500/30'
-                        : 'bg-red-600/20 text-red-400 border border-red-500/30'
+
+                    <div className={`px-4 py-2 rounded-xl text-sm font-cyber font-bold tracking-wider uppercase cyber-panel ${
+                      game.result === 'win'
+                        ? 'neon-text-green border-neon-green-300 neon-glow-green'
+                        : 'neon-text-red border-neon-red-300 neon-glow-red'
                     }`}>
-                      {game.result === 'win' ? 'Victory' : 'Defeat'}
+                      {game.result === 'win' ? '⚡ VICTORY' : '💥 DEFEAT'}
                     </div>
+
+                    {/* Corner accents for wins */}
+                    {game.result === 'win' && (
+                      <>
+                        <div className="absolute top-1 left-1 w-3 h-3 border-l-2 border-t-2 border-neon-green-400 opacity-60" />
+                        <div className="absolute bottom-1 right-1 w-3 h-3 border-r-2 border-b-2 border-neon-green-400 opacity-60" />
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
               
-              <div className="mt-4 text-center">
-                <button className="text-blue-400 hover:text-blue-300 text-sm font-medium transition-colors">
-                  View Full Match History
+              <div className="mt-8 text-center relative z-10">
+                <button className="neon-button px-8 py-3 rounded-xl font-cyber tracking-wider uppercase text-sm transition-all duration-300 text-neon-cyan-300 border-neon-cyan-300 hover:neon-glow-cyan">
+                  ACCESS FULL COMBAT LOG
                 </button>
               </div>
+
+              {/* Scanning line */}
+              <div className="absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-pink-400 to-transparent animate-scanline opacity-40" />
             </div>
           </div>
         </div>

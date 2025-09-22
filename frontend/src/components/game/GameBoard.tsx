@@ -140,38 +140,53 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <DndProvider backend={dndBackend}>
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="h-full flex flex-col bg-cyber-black relative overflow-hidden">
+      {/* Cyberpunk background pattern */}
+      <div className="cyber-bg-pattern" />
+
       {/* Game Header */}
-      <header className="bg-gray-900/95 backdrop-blur-sm border-b border-gray-700 p-4 flex-shrink-0">
+      <header className="cyber-panel border-b-2 border-neon-cyan-500/30 p-4 flex-shrink-0 relative z-10 scanlines">
+        {/* Header glow effect */}
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-neon-cyan-500/5 to-transparent" />
         <div className="flex items-center justify-between mx-auto">
 
           {/* Left Section: Turn Info + Timer */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-8 relative z-10">
             {/* Turn Indicator */}
-            <div className="flex items-center space-x-3">
-              <div className={clsx(
-                'w-3 h-3 rounded-full transition-all duration-300',
-                myTurn ? 'bg-green-400 animate-pulse' : 'bg-gray-500'
-              )} />
+            <div className="flex items-center space-x-4">
+              <div className="relative">
+                <div className={clsx(
+                  'w-4 h-4 rounded-full transition-all duration-500 border-2',
+                  myTurn ? 'bg-neon-cyan-500 border-neon-cyan-400 animate-neon-pulse neon-glow-cyan' : 'bg-cyber-muted border-cyber-border'
+                )} />
+                {myTurn && (
+                  <div className="absolute inset-0 w-4 h-4 rounded-full bg-neon-cyan-500 animate-ping opacity-75" />
+                )}
+              </div>
               <div className="flex flex-col">
                 <span className={clsx(
-                  'text-sm font-semibold',
-                  factionClasses.text.replace('text-white', 'text-gray-100')
+                  'text-sm font-bold font-cyber tracking-wider uppercase',
+                  myTurn ? 'neon-text-cyan' : 'text-cyber-muted'
                 )}>
-                  {myTurn ? 'Your Turn' : `${opponent.username}'s Turn`}
+                  {myTurn ? 'YOUR TURN' : `${opponent.username.toUpperCase()}'S TURN`}
                 </span>
-                <span className="text-xs text-gray-400">
-                  {formatFactionName(currentPlayer.faction)} vs {formatFactionName(opponent.faction)}
+                <span className="text-xs font-mono text-cyber-muted">
+                  {formatFactionName(currentPlayer.faction).toUpperCase()} VS {formatFactionName(opponent.faction).toUpperCase()}
                 </span>
               </div>
             </div>
 
             {/* Timer */}
-            <div className="flex items-center space-x-2">
-              <ClockIcon className={clsx('w-5 h-5', getTimerColor(timeRemaining))} />
+            <div className="flex items-center space-x-3 cyber-panel px-4 py-2 rounded-lg">
+              <ClockIcon className={clsx(
+                'w-6 h-6 transition-all duration-300',
+                getTimerColor(timeRemaining),
+                timeRemaining <= 10 && 'animate-cyber-flicker'
+              )} />
               <span className={clsx(
-                'text-2xl font-mono font-bold',
-                getTimerColor(timeRemaining)
+                'text-3xl font-cyber font-bold tracking-wider',
+                getTimerColor(timeRemaining),
+                timeRemaining <= 30 && 'animate-neon-pulse'
               )}>
                 {formatTime(timeRemaining)}
               </span>
@@ -179,29 +194,34 @@ const GameBoard: React.FC<GameBoardProps> = ({
           </div>
 
           {/* Center Section: End Turn Button */}
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 relative z-10">
             <button
               onClick={handleEndTurn}
               disabled={!myTurn || isProcessingAction}
               className={clsx(
-                'px-8 py-3 rounded-lg font-semibold text-lg transition-all duration-200',
-                'min-w-[120px] min-h-[48px]', // Touch-friendly sizing
+                'neon-button px-10 py-4 rounded-xl font-bold text-lg font-cyber tracking-wider uppercase',
+                'min-w-[160px] min-h-[56px] relative overflow-hidden transition-all duration-500', // Touch-friendly sizing
                 myTurn && !isProcessingAction
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                  ? 'text-neon-cyan-400 border-neon-cyan-400 neon-glow-cyan hover:text-neon-cyan-300 hover:border-neon-cyan-300 transform hover:scale-105'
+                  : 'text-cyber-muted border-cyber-border cursor-not-allowed opacity-40'
               )}
             >
-              {isProcessingAction ? 'Processing...' : 'End Turn'}
+              <span className="relative z-10">
+                {isProcessingAction ? 'PROCESSING...' : 'END TURN'}
+              </span>
+              {myTurn && !isProcessingAction && (
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-neon-cyan-500/10 to-transparent animate-scanline" />
+              )}
             </button>
           </div>
 
           {/* Right Section: Action Buttons + Connection Status */}
-          <div className="flex items-center space-x-3">
-            {/* Connection Status - Discreet */}
+          <div className="flex items-center space-x-4 relative z-10">
+            {/* Connection Status - Cyberpunk */}
             {!isConnected && (
-              <div className="flex items-center text-xs text-gray-500">
-                <div className="w-2 h-2 bg-red-400 rounded-full mr-1 animate-pulse" />
-                <span>Reconnecting</span>
+              <div className="flex items-center text-xs font-cyber text-red-400 cyber-panel px-3 py-1 rounded-lg">
+                <div className="w-2 h-2 bg-red-400 rounded-full mr-2 animate-cyber-flicker neon-glow-red" />
+                <span className="tracking-wider uppercase">RECONNECTING</span>
               </div>
             )}
 
@@ -211,31 +231,31 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 onClick={handleSurrender}
                 disabled={isProcessingAction}
                 className={clsx(
-                  'px-4 py-2 rounded-lg font-semibold transition-all duration-200',
-                  'min-w-[100px] min-h-[40px]',
+                  'neon-button px-6 py-3 rounded-lg font-bold font-cyber tracking-wider uppercase transition-all duration-300',
+                  'min-w-[120px] min-h-[48px] text-sm',
                   showSurrenderConfirm
-                    ? 'bg-red-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl'
+                    ? 'text-red-300 border-red-300 neon-glow-red animate-cyber-flicker'
+                    : 'text-red-400 border-red-400 hover:text-red-300 hover:border-red-300'
                 )}
               >
-                {showSurrenderConfirm ? 'Confirm?' : 'Surrender'}
+                {showSurrenderConfirm ? 'CONFIRM?' : 'SURRENDER'}
               </button>
 
               {/* Surrender Confirmation */}
               {showSurrenderConfirm && (
-                <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-gray-600 rounded-lg p-2 shadow-xl z-10">
-                  <div className="flex space-x-2">
+                <div className="absolute top-full right-0 mt-2 cyber-panel rounded-lg p-3 shadow-2xl z-20 border border-red-400/30">
+                  <div className="flex space-x-3">
                     <button
                       onClick={handleSurrender}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
+                      className="neon-button px-4 py-2 text-red-400 border-red-400 hover:text-red-300 hover:border-red-300 text-sm font-cyber tracking-wider rounded"
                     >
-                      Yes
+                      YES
                     </button>
                     <button
                       onClick={cancelSurrender}
-                      className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded"
+                      className="neon-button px-4 py-2 text-cyber-muted border-cyber-border hover:text-neon-cyan-400 hover:border-neon-cyan-400 text-sm font-cyber tracking-wider rounded"
                     >
-                      Cancel
+                      CANCEL
                     </button>
                   </div>
                 </div>
@@ -245,19 +265,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
             {/* Settings Button */}
             <button
               onClick={handleSettings}
-              className="p-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-all duration-200"
+              className="p-4 rounded-lg cyber-panel text-cyber-muted hover:text-neon-cyan-400 transition-all duration-300 hover:neon-glow-cyan group"
               title="Settings"
             >
-              <CogIcon className="w-5 h-5" />
+              <CogIcon className="w-6 h-6 group-hover:animate-spin" />
             </button>
           </div>
         </div>
       </header>
 
       {/* Game Content Area with Side Panels */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative">
+        {/* Tech grid overlay for main area */}
+        <div className="absolute inset-0 tech-grid opacity-5 pointer-events-none" />
+
         {/* Left Player Panel */}
-        <div className="flex-shrink-0 p-3">
+        <div className="flex-shrink-0 p-4">
           <PlayerPanel
             player={currentPlayer}
             isCurrentPlayer={true}
@@ -267,8 +290,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
 
         {/* Main Game Area - Full Space Battlefield */}
-        <main className="flex-1 flex items-stretch justify-center min-w-0 p-4">
-          <div className="flex items-center justify-between w-full max-w-7xl">
+        <main className="flex-1 flex items-stretch justify-center min-w-0 p-6 relative">
+          <div className="flex items-center justify-between w-full max-w-7xl relative z-10">
             {/* Current Player Grid (Left) - Take available space */}
             <div className="flex-1 flex flex-col items-center justify-center">
               <TacticalGrid

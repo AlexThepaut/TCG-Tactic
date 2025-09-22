@@ -67,84 +67,110 @@ const GridCell: React.FC<GridCellProps> = ({
   };
 
   const cellClassName = clsx(
-    'relative border-2 transition-all duration-200 cursor-pointer flex items-center justify-center',
+    'relative border-2 transition-all duration-500 cursor-pointer flex items-center justify-center',
+    'backdrop-blur-sm transform-gpu',
     {
       // Base states
-      'border-gray-600 bg-gray-800/50': !isPlayable && !card,
+      'border-cyber-border bg-cyber-dark/30': !isPlayable && !card,
       [getFactionColor(faction)]: isPlayable && !card,
-      'border-gray-500 bg-gray-700/80': card && !isHighlighted,
+      'border-cyber-border bg-cyber-surface/60': card && !isHighlighted,
 
-      // Interactive states
-      'border-yellow-400 bg-yellow-400/20 animate-pulse': isPlayable && isOver && canDrop,
-      'border-yellow-300 bg-yellow-300/10': isHighlighted,
-      'border-red-400 bg-red-400/20 shadow-lg shadow-red-400/30': isAttackable,
+      // Interactive states - Cyberpunk styling
+      'border-neon-cyan-400 bg-neon-cyan-500/20 animate-neon-pulse neon-glow-cyan': isPlayable && isOver && canDrop,
+      'border-neon-cyan-300 bg-neon-cyan-300/10 neon-glow-cyan': isHighlighted,
+      'border-red-400 bg-red-400/20 neon-glow-red animate-cyber-flicker': isAttackable,
 
       // Hover states
-      'hover:border-opacity-80 hover:bg-opacity-20': isInteractive,
-      'cursor-not-allowed opacity-50': !isPlayable && isInteractive,
+      'hover:border-opacity-100 hover:bg-opacity-30 hover:scale-105': isInteractive && isPlayable,
+      'cursor-not-allowed opacity-30 saturate-50': !isPlayable && isInteractive,
     }
   );
 
   return (
     <motion.div
       ref={drop}
-      className={clsx(cellClassName, 'aspect-square w-full h-full min-h-0')}
+      className={clsx(cellClassName, 'aspect-square w-full h-full min-h-0 relative overflow-hidden')}
       onClick={() => isInteractive && onClick?.(position)}
-      whileHover={isInteractive ? { scale: 1.02 } : undefined}
-      whileTap={isInteractive ? { scale: 0.98 } : undefined}
+      whileHover={isInteractive && isPlayable ? {
+        scale: 1.05,
+        filter: 'brightness(1.2)',
+        transition: { duration: 0.2 }
+      } : undefined}
+      whileTap={isInteractive ? {
+        scale: 0.95,
+        transition: { duration: 0.1 }
+      } : undefined}
       layout
+      transition={{ duration: 0.3, ease: 'easeOut' }}
     >
+      {/* Scanning grid lines */}
+      <div className="absolute inset-0 pointer-events-none">
+        <div className="tech-grid opacity-30 w-full h-full" />
+      </div>
+
       {/* Grid Position Indicator */}
-      <div className="absolute top-1 left-1 text-xs text-gray-500 font-mono">
+      <div className="absolute top-1 left-1 text-xs text-cyber-muted font-cyber tracking-wider z-10">
         {position.y},{position.x}
       </div>
 
       {/* Card Display */}
       {card && (
         <motion.div
-          className="w-full h-full flex flex-col items-center justify-center p-1 bg-gray-900/80 rounded border border-gray-600"
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          transition={{ duration: 0.2 }}
+          className="w-full h-full flex flex-col items-center justify-center p-1 cyber-card-container relative z-20"
+          initial={{ scale: 0, opacity: 0, rotateY: 90 }}
+          animate={{ scale: 1, opacity: 1, rotateY: 0 }}
+          exit={{ scale: 0, opacity: 0, rotateY: -90 }}
+          transition={{ duration: 0.4, ease: 'easeOut' }}
         >
           {/* Card Name */}
-          <div className="text-xs font-semibold text-white text-center leading-tight mb-1">
+          <div className="text-xs font-bold font-sans text-center leading-tight mb-1 neon-text-cyan">
             {card.name}
           </div>
 
           {/* Stats */}
-          <div className="flex items-center space-x-2 text-xs">
+          <div className="flex items-center space-x-3 text-xs">
             {/* Attack */}
-            <div className="flex items-center text-red-400">
-              <span className="font-bold">{card.attack}</span>
+            <div className="flex items-center">
+              <span className="font-bold font-cyber tracking-wider text-red-400 neon-text-red">
+                {card.attack}
+              </span>
             </div>
 
             {/* Health */}
-            <div className="flex items-center text-green-400">
-              <span className="font-bold">{card.health}</span>
+            <div className="flex items-center">
+              <span className="font-bold font-cyber tracking-wider text-green-400 neon-text-green">
+                {card.health}
+              </span>
               {card.maxHealth !== card.health && (
-                <span className="text-gray-400">/{card.maxHealth}</span>
+                <span className="text-cyber-muted font-cyber">/{card.maxHealth}</span>
               )}
             </div>
           </div>
 
           {/* Faction Indicator */}
-          <div className={clsx('absolute bottom-1 right-1 w-2 h-2 rounded-full', {
-            'bg-blue-400': card.faction === 'humans',
-            'bg-purple-400': card.faction === 'aliens',
-            'bg-red-400': card.faction === 'robots',
+          <div className={clsx('absolute bottom-1 right-1 w-3 h-3 rounded-full border-2 z-30', {
+            'bg-humans-500 border-humans-400 neon-glow-blue': card.faction === 'humans',
+            'bg-aliens-500 border-aliens-400 neon-glow-pink': card.faction === 'aliens',
+            'bg-robots-500 border-robots-400 neon-glow-green': card.faction === 'robots',
           })} />
+
+          {/* Holographic effect for cards */}
+          <div className="absolute inset-0 holographic opacity-20 rounded" />
         </motion.div>
       )}
 
       {/* Drop Zone Indicator */}
       {isPlayable && !card && (
-        <div className="absolute inset-0 flex items-center justify-center">
-          <div className={clsx('w-6 h-6 rounded-full border-2 border-dashed transition-all duration-200', {
-            'border-yellow-400 bg-yellow-400/10': isOver && canDrop,
-            'border-gray-500': !isOver,
-          })} />
+        <div className="absolute inset-0 flex items-center justify-center z-10">
+          <div className={clsx('w-8 h-8 rounded-full border-2 border-dashed transition-all duration-500 relative', {
+            'border-neon-cyan-400 bg-neon-cyan-400/20 neon-glow-cyan animate-neon-pulse': isOver && canDrop,
+            'border-cyber-border': !isOver,
+          })}>
+            {/* Scanning circle */}
+            {isOver && canDrop && (
+              <div className="absolute inset-0 rounded-full border border-neon-cyan-300 animate-ping" />
+            )}
+          </div>
         </div>
       )}
     </motion.div>
@@ -234,18 +260,36 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
 
   return (
     <div className={clsx('flex flex-col', className)}>
-      {/* Grid Container with Face-to-Face Rotation - Responsive */}
+      {/* Grid Container with Face-to-Face Rotation - Cyberpunk */}
       <div className={clsx('relative flex justify-center w-full')}>
         <div
-          className={clsx('grid gap-1 border-2 border-gray-700 rounded-lg p-2 bg-gray-900/50 w-full aspect-[3/5]', {
-            'grid-cols-5': !faceToFace,
-            'grid-cols-3': faceToFace
-          })}
+          className={clsx(
+            'grid gap-2 border-2 rounded-xl p-4 w-full relative overflow-hidden',
+            'cyber-panel backdrop-blur-md transition-all duration-500',
+            'border-neon-cyan-500/40 neon-glow-cyan',
+            {
+              'grid-cols-5': !faceToFace,
+              'grid-cols-3': faceToFace,
+              'aspect-[3/5]': faceToFace,
+              'aspect-[5/3]': !faceToFace
+            }
+          )}
           style={{
             maxWidth: faceToFace ? '25dvw' : '800px',
-            aspectRatio: faceToFace ? '3/5' : '5/3'
           }}
         >
+          {/* Grid background effects */}
+          <div className="absolute inset-0 tech-grid opacity-10 pointer-events-none" />
+          <div className="absolute inset-0 bg-gradient-to-br from-neon-cyan-500/5 via-transparent to-neon-blue-500/5 pointer-events-none" />
+
+          {/* Corner accent lights */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-l-2 border-t-2 border-neon-cyan-400 rounded-tl-xl" />
+          <div className="absolute top-0 right-0 w-8 h-8 border-r-2 border-t-2 border-neon-cyan-400 rounded-tr-xl" />
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-l-2 border-b-2 border-neon-cyan-400 rounded-bl-xl" />
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-r-2 border-b-2 border-neon-cyan-400 rounded-br-xl" />
+
+          {/* Scanning line animation */}
+          <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-neon-cyan-400 to-transparent animate-scanline opacity-60" />
           {transformedBoard.map((row, rowIndex) =>
             row.map((card, colIndex) => {
               // For faceToFace mode, we need to map back to original coordinates

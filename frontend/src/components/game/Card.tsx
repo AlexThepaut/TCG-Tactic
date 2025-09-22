@@ -71,40 +71,44 @@ const Card: React.FC<CardProps> = ({
     onTouch?.(e, card, handIndex);
   }, [onTouch, card, handIndex]);
 
-  // Faction-specific styling
+  // Cyberpunk faction-specific styling
   const getFactionStyles = useCallback(() => {
     switch (faction) {
       case 'humans':
         return {
-          border: canPlay ? 'border-humans-600' : 'border-humans-800/50',
-          bg: canPlay ? 'bg-gradient-to-br from-humans-50 to-humans-100' : 'bg-humans-900/20',
-          text: canPlay ? 'text-humans-900' : 'text-humans-400',
-          accent: 'text-humans-600',
-          glow: isDragging ? 'shadow-lg shadow-humans-500/30' : ''
+          border: canPlay ? 'border-humans-600' : 'border-humans-800/30',
+          bg: canPlay ? 'cyber-card-container' : 'bg-cyber-surface/30',
+          text: canPlay ? 'text-humans-400' : 'text-humans-800',
+          accent: 'text-humans-500',
+          glow: isDragging ? 'humans-glow' : (canPlay ? 'neon-glow-blue' : ''),
+          neonText: canPlay ? 'neon-text-blue' : ''
         };
       case 'aliens':
         return {
-          border: canPlay ? 'border-aliens-700' : 'border-aliens-800/50',
-          bg: canPlay ? 'bg-gradient-to-br from-aliens-50 to-aliens-100' : 'bg-aliens-900/20',
-          text: canPlay ? 'text-aliens-900' : 'text-aliens-400',
-          accent: 'text-aliens-700',
-          glow: isDragging ? 'shadow-lg shadow-aliens-500/30' : ''
+          border: canPlay ? 'border-aliens-600' : 'border-aliens-800/30',
+          bg: canPlay ? 'cyber-card-container' : 'bg-cyber-surface/30',
+          text: canPlay ? 'text-aliens-400' : 'text-aliens-800',
+          accent: 'text-aliens-500',
+          glow: isDragging ? 'aliens-glow' : (canPlay ? 'neon-glow-pink' : ''),
+          neonText: canPlay ? 'neon-text-pink' : ''
         };
       case 'robots':
         return {
-          border: canPlay ? 'border-robots-600' : 'border-robots-800/50',
-          bg: canPlay ? 'bg-gradient-to-br from-robots-50 to-robots-100' : 'bg-robots-900/20',
-          text: canPlay ? 'text-robots-900' : 'text-robots-400',
-          accent: 'text-robots-600',
-          glow: isDragging ? 'shadow-lg shadow-robots-500/30' : ''
+          border: canPlay ? 'border-robots-600' : 'border-robots-800/30',
+          bg: canPlay ? 'cyber-card-container' : 'bg-cyber-surface/30',
+          text: canPlay ? 'text-robots-400' : 'text-robots-800',
+          accent: 'text-robots-500',
+          glow: isDragging ? 'robots-glow' : (canPlay ? 'neon-glow-green' : ''),
+          neonText: canPlay ? 'neon-text-green' : ''
         };
       default:
         return {
-          border: 'border-gray-600',
-          bg: 'bg-gray-100',
-          text: 'text-gray-900',
-          accent: 'text-gray-600',
-          glow: ''
+          border: 'border-cyber-border',
+          bg: 'bg-cyber-surface',
+          text: 'text-neon-cyan-400',
+          accent: 'text-neon-cyan-500',
+          glow: '',
+          neonText: ''
         };
     }
   }, [faction, canPlay, isDragging]);
@@ -125,29 +129,34 @@ const Card: React.FC<CardProps> = ({
     }
   }, [card.rarity]);
 
-  // Animation variants
+  // Cyberpunk animation variants
   const cardVariants = {
     idle: {
       scale: 1,
       rotateY: 0,
       y: 0,
-      transition: { duration: 0.2 }
+      filter: 'brightness(1) saturate(1)',
+      transition: { duration: 0.3, ease: 'easeOut' }
     },
     hover: {
-      scale: 1.05,
-      y: -8,
-      transition: { duration: 0.2 }
+      scale: 1.08,
+      y: -12,
+      rotateY: 3,
+      filter: 'brightness(1.2) saturate(1.3)',
+      transition: { duration: 0.3, ease: 'easeOut' }
     },
     dragging: {
-      scale: 1.1,
-      rotateY: 5,
-      zIndex: 1000,
-      transition: { duration: 0.1 }
+      scale: 1.15,
+      rotateY: 8,
+      z: 50,
+      filter: 'brightness(1.4) saturate(1.5)',
+      transition: { duration: 0.2, ease: 'easeOut' }
     },
     selected: {
-      scale: 1.02,
-      y: -4,
-      transition: { duration: 0.2 }
+      scale: 1.05,
+      y: -6,
+      filter: 'brightness(1.3) saturate(1.4)',
+      transition: { duration: 0.3, ease: 'easeOut' }
     }
   };
 
@@ -167,14 +176,19 @@ const Card: React.FC<CardProps> = ({
       onClick={handleClick}
       onTouchStart={handleTouchStart}
       className={clsx(
-        "relative w-24 h-32 md:w-28 md:h-36 lg:w-32 lg:h-44 rounded-lg cursor-pointer",
+        "relative w-24 h-32 md:w-28 md:h-36 lg:w-32 lg:h-44 rounded-xl cursor-pointer",
         "select-none touch-manipulation backdrop-blur-sm",
+        "border-2 border-opacity-60 transition-all duration-500",
         styles.border,
         styles.bg,
         styles.glow,
-        canPlay ? "hover:shadow-lg" : "opacity-60 cursor-not-allowed",
-        isSelected && "ring-2 ring-offset-2 ring-blue-500",
-        "transform-gpu" // Enable hardware acceleration
+        canPlay ? "hover:border-opacity-100" : "opacity-40 cursor-not-allowed saturate-50",
+        isSelected && "ring-2 ring-offset-2 ring-offset-cyber-dark",
+        isSelected && (faction === 'humans' ? "ring-humans-500" :
+                      faction === 'aliens' ? "ring-aliens-500" : "ring-robots-500"),
+        "transform-gpu perspective-1000", // Enable hardware acceleration
+        canPlay && "faction-card", // Add cyberpunk hover effects
+        "scanlines" // Add scanline overlay
       )}
       style={{
         opacity: isDragging ? 0.5 : 1,
@@ -183,13 +197,17 @@ const Card: React.FC<CardProps> = ({
       data-testid={`card-${card.id}`}
     >
       {/* Card Header */}
-      <div className="p-2 md:p-3">
+      <div className="p-2 md:p-3 relative z-10">
         <div className="flex justify-between items-start mb-1">
           {/* Cost */}
           <div className={clsx(
-            "w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs md:text-sm font-bold",
-            canAfford ? styles.accent : 'text-red-500',
-            canAfford ? 'bg-white/80' : 'bg-red-100/80'
+            "w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs md:text-sm font-bold font-cyber",
+            "border transition-all duration-300",
+            canAfford ? (
+              `${styles.neonText} border-current bg-cyber-dark/80 backdrop-blur-sm`
+            ) : (
+              "text-red-400 border-red-400 bg-red-900/20 backdrop-blur-sm"
+            )
           )}>
             {card.cost}
           </div>
@@ -204,31 +222,48 @@ const Card: React.FC<CardProps> = ({
 
         {/* Card Name */}
         <h3 className={clsx(
-          "text-xs md:text-sm font-semibold leading-tight mb-1 line-clamp-2",
-          styles.text
+          "text-xs md:text-sm font-semibold font-sans leading-tight mb-1 line-clamp-2",
+          "transition-all duration-300",
+          canPlay ? styles.neonText : styles.text,
+          canPlay && "text-shadow-sm"
         )}>
           {card.name}
         </h3>
       </div>
 
       {/* Card Art Placeholder */}
-      <div className="px-2 md:px-3 mb-2">
+      <div className="px-2 md:px-3 mb-2 relative">
         <div className={clsx(
-          "w-full aspect-video rounded bg-gradient-to-br opacity-80",
-          faction === 'humans' && "from-humans-200 to-humans-300",
-          faction === 'aliens' && "from-aliens-200 to-aliens-300",
-          faction === 'robots' && "from-robots-200 to-robots-300"
+          "w-full aspect-video rounded-lg relative overflow-hidden",
+          "border border-opacity-30 backdrop-blur-sm",
+          styles.border,
+          canPlay && "holographic-border"
         )}>
+          {/* Holographic background */}
+          <div className={clsx(
+            "absolute inset-0 opacity-30",
+            canPlay && "holographic"
+          )} />
+
+          {/* Tech grid overlay */}
+          <div className="absolute inset-0 tech-grid opacity-20" />
+
           {card.imageUrl ? (
             <img
               src={card.imageUrl}
               alt={card.name}
-              className="w-full h-full object-cover rounded"
+              className="w-full h-full object-cover rounded-lg relative z-10"
               loading="lazy"
+              style={{
+                filter: canPlay ? 'contrast(1.2) saturate(1.3)' : 'contrast(0.8) saturate(0.7)'
+              }}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <div className={clsx("w-8 h-8 opacity-50", styles.accent)}>
+            <div className="w-full h-full flex items-center justify-center relative z-10">
+              <div className={clsx(
+                "w-8 h-8 transition-all duration-300",
+                canPlay ? `${styles.neonText} drop-shadow-lg` : `${styles.text} opacity-50`
+              )}>
                 {card.type === 'unit' ? (
                   <ShieldCheckIcon />
                 ) : (
@@ -237,25 +272,46 @@ const Card: React.FC<CardProps> = ({
               </div>
             </div>
           )}
+
+          {/* Scanning line effect */}
+          {canPlay && (
+            <div className="absolute top-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-current to-transparent opacity-60 animate-scanline" />
+          )}
         </div>
       </div>
 
       {/* Card Stats */}
       {card.type === 'unit' && showDetails && (
-        <div className="px-2 md:px-3 pb-2">
+        <div className="px-2 md:px-3 pb-2 relative z-10">
           <div className="flex justify-between items-center">
             {/* Attack */}
             <div className="flex items-center text-xs md:text-sm">
-              <BoltIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", styles.accent)} />
-              <span className={clsx("font-semibold", styles.text)}>
+              <BoltIcon className={clsx(
+                "w-3 h-3 md:w-4 md:h-4 mr-1 transition-all duration-300",
+                canPlay ? styles.neonText : styles.accent,
+                canPlay && "drop-shadow-sm"
+              )} />
+              <span className={clsx(
+                "font-bold font-cyber tracking-wider",
+                canPlay ? styles.neonText : styles.text,
+                canPlay && "text-shadow-sm"
+              )}>
                 {card.attack}
               </span>
             </div>
 
             {/* Health */}
             <div className="flex items-center text-xs md:text-sm">
-              <HeartIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", styles.accent)} />
-              <span className={clsx("font-semibold", styles.text)}>
+              <HeartIcon className={clsx(
+                "w-3 h-3 md:w-4 md:h-4 mr-1 transition-all duration-300",
+                canPlay ? styles.neonText : styles.accent,
+                canPlay && "drop-shadow-sm"
+              )} />
+              <span className={clsx(
+                "font-bold font-cyber tracking-wider",
+                canPlay ? styles.neonText : styles.text,
+                canPlay && "text-shadow-sm"
+              )}>
                 {card.health}
               </span>
             </div>
@@ -264,10 +320,15 @@ const Card: React.FC<CardProps> = ({
       )}
 
       {/* Type Badge */}
-      <div className="absolute top-1 right-1">
+      <div className="absolute top-1 right-1 z-20">
         <div className={clsx(
-          "px-1.5 py-0.5 rounded text-xs font-medium uppercase tracking-wide",
-          "bg-black/20 backdrop-blur-sm text-white"
+          "px-2 py-1 rounded-md text-xs font-bold uppercase tracking-wider font-cyber",
+          "border backdrop-blur-md transition-all duration-300",
+          canPlay ? (
+            `${styles.neonText} border-current bg-cyber-dark/60`
+          ) : (
+            "text-cyber-muted border-cyber-border bg-cyber-dark/40"
+          )
         )}>
           {card.type}
         </div>
@@ -280,16 +341,22 @@ const Card: React.FC<CardProps> = ({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 rounded-lg border-2 border-dashed border-blue-400 bg-blue-500/10 backdrop-blur-sm"
+            className={clsx(
+              "absolute inset-0 rounded-xl border-2 border-dashed backdrop-blur-sm",
+              "animate-neon-pulse",
+              faction === 'humans' && "border-humans-500 bg-humans-500/10",
+              faction === 'aliens' && "border-aliens-500 bg-aliens-500/10",
+              faction === 'robots' && "border-robots-500 bg-robots-500/10"
+            )}
           />
         )}
       </AnimatePresence>
 
       {/* Unaffordable Overlay */}
       {!canAfford && (
-        <div className="absolute inset-0 bg-red-900/40 rounded-lg backdrop-blur-sm flex items-center justify-center">
-          <div className="text-white text-xs font-semibold bg-red-600 px-2 py-1 rounded">
-            Need {card.cost - resources} more
+        <div className="absolute inset-0 bg-red-900/60 rounded-xl backdrop-blur-md flex items-center justify-center z-30">
+          <div className="text-red-400 text-xs font-bold font-cyber bg-cyber-dark/80 px-3 py-1.5 rounded-lg border border-red-400/50 backdrop-blur-sm neon-text-red animate-cyber-flicker">
+            NEED {card.cost - resources} MORE
           </div>
         </div>
       )}
