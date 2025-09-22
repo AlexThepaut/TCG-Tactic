@@ -52,26 +52,34 @@ function App() {
           </Routes>
         </Layout>
 
-        {/* Toast notifications */}
+        {/* Toast notifications - Gothic style */}
         <Toaster
           position="top-right"
           toastOptions={{
             duration: 4000,
             style: {
-              background: '#1f2937',
-              color: '#f3f4f6',
-              border: '1px solid #374151',
+              background: '#1a1a1a',
+              color: '#fcedd5',
+              border: '2px solid #7c4f0d',
+              fontFamily: 'Rajdhani, sans-serif',
+              fontWeight: '500',
+              borderRadius: '0',
+              boxShadow: '0 0 10px rgba(185, 134, 11, 0.3)',
             },
             success: {
               style: {
-                background: '#065f46',
-                border: '1px solid #10b981',
+                background: '#0a0a0a',
+                border: '2px solid #b8860b',
+                color: '#f7d0a4',
+                boxShadow: '0 0 15px rgba(185, 134, 11, 0.5)',
               },
             },
             error: {
               style: {
-                background: '#7f1d1d',
-                border: '1px solid #ef4444',
+                background: '#0a0a0a',
+                border: '2px solid #b91c1c',
+                color: '#fecaca',
+                boxShadow: '0 0 15px rgba(185, 28, 28, 0.5)',
               },
             },
           }}
