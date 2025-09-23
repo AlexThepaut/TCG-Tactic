@@ -140,41 +140,58 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   return (
     <DndProvider backend={dndBackend}>
-    <div className="h-full flex flex-col bg-gradient-to-br from-gray-900 to-gray-800">
+    <div className="h-full flex flex-col bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest relative">
+      {/* Atmospheric effects */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-600 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-robots-600 to-transparent"></div>
+        <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-aliens-600 to-transparent"></div>
+        <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-600 to-transparent"></div>
+      </div>
+
       {/* Game Header */}
-      <header className="bg-gray-900/95 backdrop-blur-sm border-b border-gray-700 p-4 flex-shrink-0">
+      <header className="bg-gothic-darkest/95 backdrop-blur-sm border-b-2 border-imperial-700/50 p-4 flex-shrink-0 relative z-10 scanlines">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent"></div>
+
         <div className="flex items-center justify-between mx-auto">
 
           {/* Left Section: Turn Info + Timer */}
-          <div className="flex items-center space-x-6">
+          <div className="flex items-center space-x-8">
             {/* Turn Indicator */}
-            <div className="flex items-center space-x-3">
-              <div className={clsx(
-                'w-3 h-3 rounded-full transition-all duration-300',
-                myTurn ? 'bg-green-400 animate-pulse' : 'bg-gray-500'
-              )} />
-              <div className="flex flex-col">
-                <span className={clsx(
-                  'text-sm font-semibold',
-                  factionClasses.text.replace('text-white', 'text-gray-100')
-                )}>
-                  {myTurn ? 'Your Turn' : `${opponent.username}'s Turn`}
-                </span>
-                <span className="text-xs text-gray-400">
-                  {formatFactionName(currentPlayer.faction)} vs {formatFactionName(opponent.faction)}
-                </span>
+            <div className="bg-gothic-darker/80 border border-imperial-600/30 p-4 relative group">
+              <div className="flex items-center space-x-4">
+                <div className={clsx(
+                  'w-4 h-4 border-2 transition-all duration-300',
+                  myTurn ? 'bg-imperial-500 border-imperial-400 shadow-lg shadow-imperial-500/50 animate-pulse' : 'bg-void-700 border-void-600'
+                )} />
+                <div className="flex flex-col">
+                  <span className={clsx(
+                    'text-sm font-gothic font-bold gothic-text-shadow tracking-wider',
+                    myTurn ? 'text-imperial-300' : 'text-void-400'
+                  )}>
+                    {myTurn ? 'YOUR COMMAND' : `${opponent.username.toUpperCase()}'S TURN`}
+                  </span>
+                  <span className="text-xs font-tech tracking-wide text-imperial-500">
+                    {formatFactionName(currentPlayer.faction).toUpperCase()} vs {formatFactionName(opponent.faction).toUpperCase()}
+                  </span>
+                </div>
               </div>
+              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-600 to-transparent group-hover:via-imperial-400 transition-colors"></div>
             </div>
 
             {/* Timer */}
-            <div className="flex items-center space-x-2">
-              <ClockIcon className={clsx('w-5 h-5', getTimerColor(timeRemaining))} />
-              <span className={clsx(
-                'text-2xl font-mono font-bold',
-                getTimerColor(timeRemaining)
-              )}>
-                {formatTime(timeRemaining)}
-              </span>
+            <div className="bg-gothic-darker/80 border border-imperial-600/30 p-4 relative group">
+              <div className="flex items-center space-x-3">
+                <ClockIcon className={clsx('w-6 h-6 icon-glow-imperial', getTimerColor(timeRemaining))} />
+                <span className={clsx(
+                  'text-3xl font-mono font-bold gothic-text-shadow',
+                  getTimerColor(timeRemaining)
+                )}>
+                  {formatTime(timeRemaining)}
+                </span>
+              </div>
+              <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-600 to-transparent group-hover:via-imperial-400 transition-colors"></div>
             </div>
           </div>
 
@@ -184,24 +201,38 @@ const GameBoard: React.FC<GameBoardProps> = ({
               onClick={handleEndTurn}
               disabled={!myTurn || isProcessingAction}
               className={clsx(
-                'px-8 py-3 rounded-lg font-semibold text-lg transition-all duration-200',
-                'min-w-[120px] min-h-[48px]', // Touch-friendly sizing
+                'px-10 py-4 border font-gothic font-bold text-lg transition-all duration-300 relative group overflow-hidden',
+                'min-w-[180px] min-h-[60px]', // Touch-friendly sizing
                 myTurn && !isProcessingAction
-                  ? 'bg-blue-600 hover:bg-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
-                  : 'bg-gray-600 text-gray-400 cursor-not-allowed opacity-50'
+                  ? 'bg-imperial-600/80 hover:bg-imperial-500 text-imperial-100 border-imperial-400/50 hover:box-glow-imperial transform hover:scale-105'
+                  : 'bg-gothic-darker/60 text-void-500 border-void-700/30 cursor-not-allowed opacity-50'
               )}
             >
-              {isProcessingAction ? 'Processing...' : 'End Turn'}
+              <div className={clsx(
+                'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity',
+                myTurn && !isProcessingAction && 'from-imperial-900/20 to-imperial-700/10'
+              )}></div>
+              <span className="relative z-10 gothic-text-shadow tracking-wider">
+                {isProcessingAction ? 'PROCESSING...' : 'END TURN'}
+              </span>
+              {myTurn && !isProcessingAction && (
+                <>
+                  <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                  <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                </>
+              )}
             </button>
           </div>
 
           {/* Right Section: Action Buttons + Connection Status */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-4">
             {/* Connection Status - Discreet */}
             {!isConnected && (
-              <div className="flex items-center text-xs text-gray-500">
-                <div className="w-2 h-2 bg-red-400 rounded-full mr-1 animate-pulse" />
-                <span>Reconnecting</span>
+              <div className="bg-blood-600/80 border border-blood-500/50 px-3 py-2 backdrop-blur-sm">
+                <div className="flex items-center text-xs font-tech tracking-wide">
+                  <div className="w-2 h-2 bg-blood-400 rounded-full mr-2 animate-pulse" />
+                  <span className="text-blood-200 gothic-text-shadow">RECONNECTING</span>
+                </div>
               </div>
             )}
 
@@ -211,31 +242,36 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 onClick={handleSurrender}
                 disabled={isProcessingAction}
                 className={clsx(
-                  'px-4 py-2 rounded-lg font-semibold transition-all duration-200',
-                  'min-w-[100px] min-h-[40px]',
+                  'px-6 py-3 border font-gothic font-bold transition-all duration-300 relative group overflow-hidden',
+                  'min-w-[140px] min-h-[48px]',
                   showSurrenderConfirm
-                    ? 'bg-red-700 text-white'
-                    : 'bg-red-600 hover:bg-red-700 text-white shadow-lg hover:shadow-xl'
+                    ? 'bg-blood-700/80 text-blood-100 border-blood-500/50'
+                    : 'bg-blood-600/80 hover:bg-blood-500 text-blood-100 border-blood-400/50 hover:box-glow-void'
                 )}
               >
-                {showSurrenderConfirm ? 'Confirm?' : 'Surrender'}
+                <div className="absolute inset-0 bg-gradient-to-br from-blood-900/20 to-blood-700/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <span className="relative z-10 gothic-text-shadow tracking-wider">
+                  {showSurrenderConfirm ? 'CONFIRM?' : 'SURRENDER'}
+                </span>
+                <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blood-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blood-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               </button>
 
               {/* Surrender Confirmation */}
               {showSurrenderConfirm && (
-                <div className="absolute top-full right-0 mt-2 bg-gray-800 border border-gray-600 rounded-lg p-2 shadow-xl z-10">
-                  <div className="flex space-x-2">
+                <div className="absolute top-full right-0 mt-2 bg-gothic-darkest/95 border-2 border-blood-700/50 p-3 shadow-xl z-10 backdrop-blur-sm">
+                  <div className="flex space-x-3">
                     <button
                       onClick={handleSurrender}
-                      className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-sm rounded"
+                      className="px-4 py-2 bg-blood-600/80 hover:bg-blood-500 text-blood-100 border border-blood-400/50 font-tech font-bold text-sm tracking-wide transition-all"
                     >
-                      Yes
+                      <span className="gothic-text-shadow">CONFIRM</span>
                     </button>
                     <button
                       onClick={cancelSurrender}
-                      className="px-3 py-1 bg-gray-600 hover:bg-gray-700 text-white text-sm rounded"
+                      className="px-4 py-2 bg-void-600/80 hover:bg-void-500 text-void-100 border border-void-400/50 font-tech font-bold text-sm tracking-wide transition-all"
                     >
-                      Cancel
+                      <span className="gothic-text-shadow">CANCEL</span>
                     </button>
                   </div>
                 </div>
@@ -245,8 +281,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
             {/* Settings Button */}
             <button
               onClick={handleSettings}
-              className="p-3 rounded-lg bg-gray-700 hover:bg-gray-600 text-gray-300 hover:text-white transition-all duration-200"
-              title="Settings"
+              className="p-4 border border-void-700/50 bg-void-600/80 hover:bg-void-500 text-void-300 hover:text-void-100 transition-all duration-300 hover:box-glow-void"
+              title="Tactical Settings"
             >
               <CogIcon className="w-5 h-5" />
             </button>
@@ -255,7 +291,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
       </header>
 
       {/* Game Content Area with Side Panels */}
-      <div className="flex-1 flex min-h-0">
+      <div className="flex-1 flex min-h-0 relative z-10">
         {/* Left Player Panel */}
         <div className="flex-shrink-0 p-3">
           <PlayerPanel
@@ -267,10 +303,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
 
         {/* Main Game Area - Full Space Battlefield */}
-        <main className="flex-1 flex items-stretch justify-center min-w-0 p-4">
-          <div className="flex items-center justify-between w-full max-w-7xl">
+        <main className="flex-1 flex items-stretch justify-center min-w-0 p-4 relative">
+          {/* Battlefield atmospheric effects */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-1/3 left-1/4 w-2 h-2 bg-imperial-500 rounded-full animate-ember"></div>
+            <div className="absolute bottom-1/3 right-1/4 w-1 h-1 bg-robots-500 rounded-full animate-ember" style={{ animationDelay: '1s' }}></div>
+            <div className="absolute top-2/3 left-2/3 w-1.5 h-1.5 bg-aliens-500 rounded-full animate-ember" style={{ animationDelay: '2s' }}></div>
+          </div>
+
+          <div className="flex items-center justify-between w-full max-w-7xl relative z-10">
             {/* Current Player Grid (Left) - Take available space */}
             <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="mb-4">
+                <h2 className="text-xl font-gothic font-bold text-imperial-300 gothic-text-shadow tracking-wider text-center">
+                  YOUR BATTLEFIELD
+                </h2>
+              </div>
               <TacticalGrid
                 player="current"
                 board={currentPlayer.board}
@@ -281,8 +329,21 @@ const GameBoard: React.FC<GameBoardProps> = ({
               />
             </div>
 
+            {/* Battle Line Separator */}
+            <div className="flex-shrink-0 mx-8">
+              <div className="w-px h-96 bg-gradient-to-b from-transparent via-imperial-600 to-transparent opacity-60"></div>
+              <div className="text-center py-4">
+                <div className="text-imperial-400 font-gothic text-lg gothic-text-shadow">⚔</div>
+              </div>
+            </div>
+
             {/* Opponent Grid (Right) - Take available space */}
             <div className="flex-1 flex flex-col items-center justify-center">
+              <div className="mb-4">
+                <h2 className="text-xl font-gothic font-bold text-void-400 gothic-text-shadow tracking-wider text-center">
+                  ENEMY TERRITORY
+                </h2>
+              </div>
               <TacticalGrid
                 player="opponent"
                 board={opponent.board}

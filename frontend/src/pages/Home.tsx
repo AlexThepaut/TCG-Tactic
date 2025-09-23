@@ -46,19 +46,19 @@ const Home = () => {
 
           <h1 className="text-7xl md:text-9xl font-display font-black mb-8 gothic-text-shadow relative">
             <span className="bg-gradient-to-r from-imperial-300 via-imperial-400 to-imperial-600 bg-clip-text text-transparent animate-hologram">
-              TCG TACTIQUE
+              ECHOES OF WAR
             </span>
           </h1>
 
           <div className="relative mb-8">
             <p className="text-2xl md:text-3xl font-tech font-medium text-imperial-200 gothic-text-shadow tracking-wider">
-              TACTICAL WARFARE • REAL-TIME COMBAT • STRATEGIC MASTERY
+              ETERNAL WARFARE • ECHOING BATTLEFIELDS • LEGENDARY CONFLICTS
             </p>
             <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent"></div>
           </div>
 
           <p className="text-lg md:text-xl text-void-300 font-tech font-light tracking-wide opacity-80">
-            "Where strategy meets destiny on the digital battlefield..."
+            "When wars end, their echoes shape the fate of worlds..."
           </p>
         </div>
 
@@ -113,10 +113,10 @@ const Home = () => {
                 <PlayIcon className="w-16 h-16 mx-auto group-hover:icon-glow-humans transition-all" />
               </div>
               <h3 className="text-2xl font-gothic font-bold mb-3 text-humans-300 gothic-text-shadow tracking-wider">
-                QUICK DEPLOY
+                WAR COUNCIL
               </h3>
               <p className="text-humans-200 font-tech text-sm tracking-wide opacity-80">
-                Jump into battle immediately
+                Enter the eternal battlefields
               </p>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-humans-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-humans-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -133,10 +133,10 @@ const Home = () => {
                 <RectangleStackIcon className="w-16 h-16 mx-auto group-hover:icon-glow-aliens transition-all" />
               </div>
               <h3 className="text-2xl font-gothic font-bold mb-3 text-aliens-300 gothic-text-shadow tracking-wider">
-                CARD ARCHIVES
+                WAR CHRONICLES
               </h3>
               <p className="text-aliens-200 font-tech text-sm tracking-wide opacity-80">
-                Browse all available cards
+                Discover legends of ancient wars
               </p>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aliens-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aliens-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -153,10 +153,10 @@ const Home = () => {
                 <WrenchScrewdriverIcon className="w-16 h-16 mx-auto group-hover:icon-glow-robots transition-all" />
               </div>
               <h3 className="text-2xl font-gothic font-bold mb-3 text-robots-300 gothic-text-shadow tracking-wider">
-                DECK FORGE
+                LEGION FORGE
               </h3>
               <p className="text-robots-200 font-tech text-sm tracking-wide opacity-80">
-                Craft strategic configurations
+                Forge your war legion
               </p>
               <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-robots-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
               <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-robots-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -167,7 +167,7 @@ const Home = () => {
         {/* Footer Quote */}
         <div className="mt-16 text-center">
           <p className="text-imperial-400 font-gothic italic text-lg gothic-text-shadow">
-            "Victory Through Strategy"
+            "In War's Echo, Legends Are Born"
           </p>
         </div>
       </div>

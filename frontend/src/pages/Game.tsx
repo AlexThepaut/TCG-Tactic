@@ -12,40 +12,40 @@ const createMockGameState = (gameId: string): GameState => {
   const mockCards: GameCard[] = [
     {
       id: 'card-1',
-      name: 'Human Soldier',
+      name: 'Imperial Warrior',
       cost: 2,
       attack: 2,
       health: 3,
       maxHealth: 3,
       faction: 'humans' as Faction,
       type: 'unit',
-      abilities: ['Tactical Formation'],
+      abilities: ['War Formation'],
     },
     {
       id: 'card-2',
-      name: 'Alien Scout',
+      name: 'Alien Echo',
       cost: 1,
       attack: 1,
       health: 2,
       maxHealth: 2,
       faction: 'aliens' as Faction,
       type: 'unit',
-      abilities: ['Adaptive Evolution'],
+      abilities: ['War Evolution'],
     },
     {
       id: 'card-3',
-      name: 'Robot Guardian',
+      name: 'Machine Guardian',
       cost: 3,
       attack: 3,
       health: 4,
       maxHealth: 4,
       faction: 'robots' as Faction,
       type: 'unit',
-      abilities: ['Reanimation Protocol'],
+      abilities: ['War Protocol'],
     },
     {
       id: 'card-4',
-      name: 'Lightning Bolt',
+      name: 'War Strike',
       cost: 2,
       attack: 0,
       health: 0,
@@ -235,17 +235,42 @@ const Game = () => {
   // Loading state
   if (isLoading) {
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="text-center text-white">
-          <div className="text-2xl font-semibold mb-4">Loading Game...</div>
+      <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex items-center justify-center relative overflow-hidden">
+        {/* Atmospheric effects */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-600 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-robots-600 to-transparent"></div>
+          <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-aliens-600 to-transparent"></div>
+          <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-600 to-transparent"></div>
+        </div>
+
+        <div className="text-center relative z-10">
+          <div className="mb-6 flex justify-center">
+            <div className="text-imperial-400 text-4xl font-gothic icon-glow-imperial animate-pulse">⚔</div>
+          </div>
+
+          <div className="text-3xl font-gothic font-bold text-imperial-400 mb-6 gothic-text-shadow tracking-wider animate-hologram">
+            INITIALIZING WAR FIELD...
+          </div>
+
           {gameId && (
-            <div className="text-gray-400">Game ID: {gameId}</div>
+            <div className="text-imperial-300 font-tech tracking-wide mb-4">WAR ID: {gameId}</div>
           )}
+
           {!isConnected && (
-            <div className="text-yellow-400 mt-2">
-              No connection - using mock data
+            <div className="text-blood-400 mt-4 font-tech tracking-wide animate-flicker">
+              ⚠ OFFLINE MODE • WAR SIMULATION ACTIVE
             </div>
           )}
+
+          {/* Loading animation */}
+          <div className="mt-6 flex justify-center">
+            <div className="flex space-x-2">
+              <div className="w-3 h-3 bg-imperial-500 rounded-full animate-bounce"></div>
+              <div className="w-3 h-3 bg-imperial-500 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+              <div className="w-3 h-3 bg-imperial-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+            </div>
+          </div>
         </div>
       </div>
     );
@@ -255,20 +280,32 @@ const Game = () => {
   if (socketError && !useMockData) {
     console.log("Error on socket and don't use mock");
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="text-center text-white max-w-md">
-          <div className="text-2xl font-semibold mb-4 text-red-400">
-            Connection Error
+      <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex items-center justify-center relative overflow-hidden">
+        {/* Atmospheric effects */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blood-600 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-blood-600 to-transparent"></div>
+        </div>
+
+        <div className="text-center relative z-10 max-w-md">
+          <div className="mb-6 flex justify-center">
+            <div className="text-blood-400 text-4xl font-gothic icon-glow-void animate-flicker">⚠</div>
           </div>
-          <div className="text-gray-300 mb-6">
+
+          <div className="text-3xl font-gothic font-bold text-blood-400 mb-6 gothic-text-shadow tracking-wider">
+            CONNECTION FAILURE
+          </div>
+
+          <div className="text-blood-300 mb-8 font-tech tracking-wide bg-gothic-darkest/60 border border-blood-600/30 p-4">
             {socketError}
           </div>
+
           <Link
             to="/"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            className="inline-flex items-center px-8 py-4 bg-imperial-600/80 hover:bg-imperial-500 text-imperial-100 border border-imperial-400/50 font-tech font-bold tracking-wide transition-all duration-300 hover:box-glow-imperial"
           >
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Return to Home
+            <ArrowLeftIcon className="w-5 h-5 mr-3" />
+            <span className="gothic-text-shadow">RETURN TO WAR ROOM</span>
           </Link>
         </div>
       </div>
@@ -279,20 +316,32 @@ const Game = () => {
   if (!gameState) {
     console.log("No game state")
     return (
-      <div className="h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex items-center justify-center">
-        <div className="text-center text-white max-w-md">
-          <div className="text-2xl font-semibold mb-4">
-            Game Not Found
+      <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex items-center justify-center relative overflow-hidden">
+        {/* Atmospheric effects */}
+        <div className="absolute inset-0 opacity-30">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-void-600 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-void-600 to-transparent"></div>
+        </div>
+
+        <div className="text-center relative z-10 max-w-md">
+          <div className="mb-6 flex justify-center">
+            <div className="text-void-400 text-4xl font-gothic icon-glow-void animate-pulse">❌</div>
           </div>
-          <div className="text-gray-300 mb-6">
-            The requested game could not be loaded.
+
+          <div className="text-3xl font-gothic font-bold text-void-400 mb-6 gothic-text-shadow tracking-wider">
+            WAR DATA MISSING
           </div>
+
+          <div className="text-void-300 mb-8 font-tech tracking-wide bg-gothic-darkest/60 border border-void-600/30 p-4">
+            War intelligence could not be retrieved.
+          </div>
+
           <Link
             to="/"
-            className="inline-flex items-center px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors"
+            className="inline-flex items-center px-8 py-4 bg-imperial-600/80 hover:bg-imperial-500 text-imperial-100 border border-imperial-400/50 font-tech font-bold tracking-wide transition-all duration-300 hover:box-glow-imperial"
           >
-            <ArrowLeftIcon className="w-5 h-5 mr-2" />
-            Return to Home
+            <ArrowLeftIcon className="w-5 h-5 mr-3" />
+            <span className="gothic-text-shadow">RETURN TO WAR ROOM</span>
           </Link>
         </div>
       </div>
@@ -301,11 +350,19 @@ const Game = () => {
 
   console.log("Normal way")
   return (
-    <div className="h-screen bg-gradient-to-br from-gray-900 to-gray-800 flex flex-col">
+    <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex flex-col relative overflow-hidden">
+      {/* Atmospheric background effects */}
+      <div className="absolute inset-0 opacity-30">
+        <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-600 to-transparent"></div>
+        <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-robots-600 to-transparent"></div>
+        <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-aliens-600 to-transparent"></div>
+        <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-600 to-transparent"></div>
+      </div>
+
       {/* Connection Status */}
       {!isConnected && !useMockData && (
-        <div className="absolute top-4 right-4 z-50 bg-red-600 text-white px-4 py-2 rounded-lg shadow-lg">
-          Connection Lost
+        <div className="absolute top-4 right-4 z-50 bg-blood-600/90 border border-blood-500/50 text-blood-100 px-6 py-3 backdrop-blur-sm font-tech font-bold tracking-wide shadow-lg shadow-blood-500/30">
+          <span className="gothic-text-shadow">⚠ CONNECTION LOST</span>
         </div>
       )}
 

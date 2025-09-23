@@ -5,112 +5,191 @@ const Collection = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedFaction, setSelectedFaction] = useState<'all' | 'humans' | 'aliens' | 'robots'>('all');
 
-
   return (
-    <div className="min-h-screen p-4 md:p-8">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen p-4 md:p-8 relative">
+      {/* Atmospheric effects */}
+      <div className="absolute inset-0 overflow-hidden">
+        {/* Floating embers */}
+        <div className="absolute top-20 left-20 w-2 h-2 bg-robots-500 rounded-full animate-ember opacity-60"></div>
+        <div className="absolute top-32 right-32 w-1 h-1 bg-imperial-400 rounded-full animate-ember opacity-40" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute bottom-40 left-40 w-1.5 h-1.5 bg-aliens-600 rounded-full animate-ember opacity-50" style={{ animationDelay: '2s' }}></div>
+
+        {/* Scanning beams */}
+        <div className="absolute top-0 left-1/4 w-px h-32 bg-gradient-to-b from-imperial-400 to-transparent opacity-30 animate-flicker"></div>
+        <div className="absolute top-0 right-1/3 w-px h-24 bg-gradient-to-b from-aliens-500 to-transparent opacity-20 animate-flicker" style={{ animationDelay: '1.5s' }}></div>
+      </div>
+
+      <div className="max-w-7xl mx-auto relative z-10">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-white mb-4">Card Collection</h1>
-          <p className="text-gray-300">Browse all 360 available cards in the current rotation</p>
+        <div className="mb-8 text-center">
+          {/* Gothic decoration */}
+          <div className="mb-6 flex justify-center">
+            <div className="text-aliens-400 text-3xl font-gothic icon-glow-aliens">📚</div>
+          </div>
+
+          <h1 className="text-5xl md:text-6xl font-display font-black mb-4 gothic-text-shadow">
+            <span className="bg-gradient-to-r from-aliens-300 via-aliens-400 to-aliens-600 bg-clip-text text-transparent animate-hologram">
+              WAR CHRONICLES
+            </span>
+          </h1>
+
+          <div className="relative mb-6">
+            <p className="text-xl md:text-2xl font-tech font-medium text-aliens-200 gothic-text-shadow tracking-wider">
+              BATTLEFIELD ARCHIVES • 360 WAR ECHOES • LEGENDARY CONFLICTS
+            </p>
+            <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2 w-32 h-px bg-gradient-to-r from-transparent via-aliens-500 to-transparent"></div>
+          </div>
+
+          <p className="text-lg text-void-300 font-tech font-light tracking-wide opacity-80">
+            "Every echo tells a tale of glory and sacrifice..."
+          </p>
         </div>
 
-        {/* Filters */}
-        <div className="mb-8 bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10">
-          <div className="flex flex-col md:flex-row gap-4">
-            {/* Search */}
+        {/* Filters - Command Console */}
+        <div className="mb-8 bg-gothic-darkest/90 backdrop-blur-sm border-2 border-aliens-700/50 p-8 relative scanlines">
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aliens-500 to-transparent"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aliens-500 to-transparent"></div>
+
+          <h2 className="text-2xl font-gothic font-bold mb-6 text-aliens-400 gothic-text-shadow tracking-wider text-center">
+            ⚙ WAR ARCHIVES ⚙
+          </h2>
+
+          <div className="flex flex-col md:flex-row gap-6">
+            {/* Search Console */}
             <div className="flex-1 relative">
-              <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Search cards..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-3 bg-gray-800 border border-gray-600 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+              <div className="bg-gothic-darker/80 border border-aliens-600/30 p-4 relative group">
+                <MagnifyingGlassIcon className="absolute left-6 top-1/2 transform -translate-y-1/2 w-5 h-5 text-aliens-400 icon-glow-aliens" />
+                <input
+                  type="text"
+                  placeholder="Search war chronicles..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-14 pr-4 py-3 bg-transparent border-0 text-aliens-200 placeholder-aliens-500 focus:outline-none focus:ring-0 font-tech tracking-wide"
+                />
+                <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-aliens-600 to-transparent group-hover:via-aliens-400 transition-colors"></div>
+              </div>
             </div>
 
-            {/* Faction Filter */}
+            {/* Faction Selection Console */}
             <div className="flex gap-2">
               <button
                 onClick={() => setSelectedFaction('all')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-6 py-3 border font-tech font-medium text-sm tracking-wide transition-all duration-300 relative group ${
                   selectedFaction === 'all'
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-imperial-600/80 text-imperial-100 border-imperial-400/50 box-glow-imperial'
+                    : 'text-imperial-300 hover:text-imperial-200 hover:bg-imperial-800/30 border-imperial-700/30 bg-gothic-darker/80'
                 }`}
               >
-                All
+                <span className="gothic-text-shadow">ALL ECHOES</span>
               </button>
               <button
                 onClick={() => setSelectedFaction('humans')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-6 py-3 border font-tech font-medium text-sm tracking-wide transition-all duration-300 relative group ${
                   selectedFaction === 'humans'
-                    ? 'bg-humans-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-humans-600/80 text-humans-100 border-humans-400/50 box-glow-humans'
+                    : 'text-humans-300 hover:text-humans-200 hover:bg-humans-800/30 border-humans-700/30 bg-gothic-darker/80'
                 }`}
               >
-                🛡️ Humans
+                <span className="gothic-text-shadow">🛡️ IMPERIAL</span>
               </button>
               <button
                 onClick={() => setSelectedFaction('aliens')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-6 py-3 border font-tech font-medium text-sm tracking-wide transition-all duration-300 relative group ${
                   selectedFaction === 'aliens'
-                    ? 'bg-aliens-700 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-aliens-600/80 text-aliens-100 border-aliens-400/50 box-glow-aliens'
+                    : 'text-aliens-300 hover:text-aliens-200 hover:bg-aliens-800/30 border-aliens-700/30 bg-gothic-darker/80'
                 }`}
               >
-                👽 Aliens
+                <span className="gothic-text-shadow">👽 ALIEN</span>
               </button>
               <button
                 onClick={() => setSelectedFaction('robots')}
-                className={`px-4 py-2 rounded-lg transition-colors ${
+                className={`px-6 py-3 border font-tech font-medium text-sm tracking-wide transition-all duration-300 relative group ${
                   selectedFaction === 'robots'
-                    ? 'bg-robots-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                    ? 'bg-robots-600/80 text-robots-100 border-robots-400/50 box-glow-robots'
+                    : 'text-robots-300 hover:text-robots-200 hover:bg-robots-800/30 border-robots-700/30 bg-gothic-darker/80'
                 }`}
               >
-                🤖 Robots
+                <span className="gothic-text-shadow">🤖 MACHINE</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Cards Grid Placeholder */}
+        {/* Cards Grid - Tactical Display */}
         <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
           {/* Mock card entries */}
           {Array.from({ length: 24 }).map((_, i) => {
             const mockFactions = ['humans', 'aliens', 'robots'] as const;
             const faction = mockFactions[i % 3];
-            
+            const factionNames = {
+              humans: 'IMPERIAL',
+              aliens: 'ALIEN',
+              robots: 'MACHINE'
+            };
+
             return (
               <div
                 key={i}
-                className={`bg-${faction}-900/30 backdrop-blur-sm rounded-lg p-4 border border-${faction}-600/30 hover:border-${faction}-500/50 transition-all duration-300 cursor-pointer group`}
+                className={`bg-gothic-darkest/60 border-2 border-${faction}-600/50 hover:border-${faction}-400 p-4 relative group transition-all duration-500 hover:scale-105 overflow-hidden`}
               >
-                <div className="aspect-card bg-gray-800 rounded-md mb-3 flex items-center justify-center text-gray-500 text-xs">
-                  Card Art
+                <div className={`absolute inset-0 bg-gradient-to-br from-${faction}-900/20 to-${faction}-700/10 opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+
+                <div className="relative z-10">
+                  <div className="aspect-card bg-gothic-darker rounded-md mb-3 flex items-center justify-center text-void-500 text-xs font-tech border border-gothic-medium/30">
+                    <span className="gothic-text-shadow">CLASSIFIED</span>
+                  </div>
+
+                  <h3 className={`font-gothic font-bold text-${faction}-300 mb-1 text-sm gothic-text-shadow tracking-wider`}>
+                    {factionNames[faction]} ECHO {i + 1}
+                  </h3>
+
+                  <div className={`flex justify-between text-xs text-${faction}-400 font-tech tracking-wide mb-2`}>
+                    <span>VOID: {(i % 10) + 1}</span>
+                    <span>WAR: {(i % 5) + 1}/{(i % 5) + 2}</span>
+                  </div>
+
+                  {/* Tactical data strip */}
+                  <div className={`text-xs text-${faction}-500 font-tech opacity-70`}>
+                    ID: EOW-{i.toString().padStart(3, '0')}
+                  </div>
                 </div>
-                <h3 className={`font-semibold text-${faction}-300 mb-1 text-sm`}>
-                  Mock Card {i + 1}
-                </h3>
-                <div className="flex justify-between text-xs text-gray-400">
-                  <span>Cost: {(i % 10) + 1}</span>
-                  <span>ATK/HP: {(i % 5) + 1}/{(i % 5) + 2}</span>
-                </div>
+
+                {/* Border glow effects */}
+                <div className={`absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${faction}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
+                <div className={`absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${faction}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
               </div>
             );
           })}
         </div>
 
-        {/* Collection Status */}
-        <div className="mt-12 text-center">
-          <div className="bg-black/20 backdrop-blur-sm rounded-xl p-6 border border-white/10 inline-block">
-            <h3 className="text-lg font-semibold text-white mb-2">Collection Status</h3>
-            <p className="text-gray-300">All 360 cards available • No collection system required</p>
-            <p className="text-sm text-gray-400 mt-2">
-              TCG Tactique provides equal access to all cards for competitive fairness
-            </p>
+        {/* Tactical Intelligence Summary */}
+        <div className="mt-16 text-center">
+          <div className="bg-gothic-darkest/90 backdrop-blur-sm border-2 border-imperial-700/50 p-8 relative scanlines inline-block">
+            <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent"></div>
+            <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent"></div>
+
+            <div className="mb-4 flex justify-center">
+              <div className="text-imperial-400 text-2xl font-gothic icon-glow-imperial">⚡</div>
+            </div>
+
+            <h3 className="text-2xl font-gothic font-bold text-imperial-400 mb-4 gothic-text-shadow tracking-wider">
+              WAR ARCHIVES STATUS
+            </h3>
+
+            <div className="space-y-3">
+              <p className="text-imperial-200 font-tech font-medium tracking-wide">
+                ◉ ALL 360 ECHOES ACCESSIBLE • EQUAL WAR CONDITIONS
+              </p>
+              <p className="text-imperial-300 font-tech text-sm opacity-80">
+                No collection barriers • Pure tactical warfare
+              </p>
+              <div className="mt-4 pt-4 border-t border-imperial-600/30">
+                <p className="text-void-400 font-tech italic text-sm gothic-text-shadow">
+                  "Victory is earned through warfare, not through wealth..."
+                </p>
+              </div>
+            </div>
           </div>
         </div>
       </div>

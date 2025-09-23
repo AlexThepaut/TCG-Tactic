@@ -48,8 +48,8 @@ const DeviceOrientation: React.FC<DeviceOrientationProps> = ({ children }) => {
           </h2>
 
           <p className="text-gray-300 mb-6 leading-relaxed">
-            TCG Tactique is designed for landscape orientation.
-            Please rotate your device to continue playing.
+            Echoes Of War is designed for landscape orientation.
+            Please rotate your device to continue the war.
           </p>
 
           <div className="bg-gray-800 rounded-lg p-4 border border-gray-700">

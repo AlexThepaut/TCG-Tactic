@@ -26,42 +26,42 @@ const Navigation = () => {
 
   const navigationItems = [
     {
-      name: 'Command',
+      name: 'War Room',
       href: '/',
       icon: HomeIcon,
       iconSolid: HomeIconSolid,
       color: 'imperial',
     },
     {
-      name: 'Deploy',
+      name: 'War Council',
       href: '/game',
       icon: PlayIcon,
       iconSolid: PlayIconSolid,
       color: 'humans',
     },
     {
-      name: 'Archives',
+      name: 'War Chronicles',
       href: '/collection',
       icon: RectangleStackIcon,
       iconSolid: RectangleStackIconSolid,
       color: 'aliens',
     },
     {
-      name: 'Forge',
+      name: 'War Forge',
       href: '/deck-builder',
       icon: WrenchScrewdriverIcon,
       iconSolid: WrenchScrewdriverIconSolid,
       color: 'robots',
     },
     {
-      name: 'Operative',
+      name: 'War Hero',
       href: '/profile',
       icon: UserIcon,
       iconSolid: UserIconSolid,
       color: 'void',
     },
     {
-      name: 'Intel',
+      name: 'War Lore',
       href: '/help',
       icon: QuestionMarkCircleIcon,
       iconSolid: QuestionMarkCircleIconSolid,
@@ -130,10 +130,10 @@ const Navigation = () => {
               className="flex items-center space-x-3 text-imperial-200 hover:text-imperial-300 transition-all duration-300 group"
             >
               <div className="w-10 h-10 bg-gradient-to-br from-imperial-600 to-imperial-800 border border-imperial-500/50 flex items-center justify-center font-tech font-bold text-sm text-imperial-100 group-hover:box-glow-imperial transition-all">
-                <span className="gothic-text-shadow">TCG</span>
+                <span className="gothic-text-shadow">EOW</span>
               </div>
               <span className="font-display font-black text-xl gothic-text-shadow tracking-wider">
-                TCG TACTIQUE
+                ECHOES OF WAR
               </span>
             </Link>
           </div>
