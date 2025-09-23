@@ -130,7 +130,7 @@ const Navigation = () => {
               className="flex items-center space-x-3 text-imperial-200 hover:text-imperial-300 transition-all duration-300 group"
             >
               <div className="w-10 h-10 bg-gradient-to-br from-imperial-600 to-imperial-800 border border-imperial-500/50 flex items-center justify-center font-tech font-bold text-sm text-imperial-100 group-hover:box-glow-imperial transition-all">
-                <span className="gothic-text-shadow">EOW</span>
+                <img src="./../../assets/logo.png"/>
               </div>
               <span className="font-display font-black text-xl gothic-text-shadow tracking-wider">
                 ECHOES OF WAR
