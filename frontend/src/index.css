@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Cinzel:wght@400;600;700&family=Rajdhani:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
@@ -8,6 +10,115 @@
   }
 
   body {
-    @apply antialiased;
+    @apply antialiased bg-gothic-black text-imperial-100;
+  }
+
+  /* Custom scrollbar for dark theme */
+  ::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: theme('colors.gothic.darkest');
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: theme('colors.imperial.600');
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme('colors.imperial.500');
+  }
+}
+
+@layer components {
+  /* Gothic text shadow for dramatic effect */
+  .gothic-text-shadow {
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+  }
+
+  /* Icon glow effects using drop-shadow for better icon rendering */
+  .icon-glow-imperial {
+    filter: drop-shadow(0 0 3px theme('colors.imperial.400'))
+            drop-shadow(0 0 6px theme('colors.imperial.500'));
+  }
+
+  .icon-glow-humans {
+    filter: drop-shadow(0 0 3px theme('colors.humans.400'))
+            drop-shadow(0 0 6px theme('colors.humans.500'));
+  }
+
+  .icon-glow-aliens {
+    filter: drop-shadow(0 0 3px theme('colors.aliens.400'))
+            drop-shadow(0 0 6px theme('colors.aliens.500'));
+  }
+
+  .icon-glow-robots {
+    filter: drop-shadow(0 0 3px theme('colors.robots.400'))
+            drop-shadow(0 0 6px theme('colors.robots.500'));
+  }
+
+  .icon-glow-void {
+    filter: drop-shadow(0 0 3px theme('colors.void.400'))
+            drop-shadow(0 0 6px theme('colors.void.500'));
+  }
+
+  /* Box glow effects for containers and backgrounds */
+  .box-glow-imperial {
+    box-shadow: 0 0 10px theme('colors.imperial.400'),
+                0 0 20px theme('colors.imperial.500'),
+                0 0 30px theme('colors.imperial.600');
+  }
+
+  .box-glow-humans {
+    box-shadow: 0 0 10px theme('colors.humans.400'),
+                0 0 20px theme('colors.humans.500'),
+                0 0 30px theme('colors.humans.600');
+  }
+
+  .box-glow-aliens {
+    box-shadow: 0 0 10px theme('colors.aliens.400'),
+                0 0 20px theme('colors.aliens.500'),
+                0 0 30px theme('colors.aliens.600');
+  }
+
+  .box-glow-robots {
+    box-shadow: 0 0 10px theme('colors.robots.400'),
+                0 0 20px theme('colors.robots.500'),
+                0 0 30px theme('colors.robots.600');
+  }
+
+  .box-glow-void {
+    box-shadow: 0 0 10px theme('colors.void.400'),
+                0 0 20px theme('colors.void.500'),
+                0 0 30px theme('colors.void.600');
+  }
+
+  /* Holographic border effect */
+  .holo-border {
+    border-image: linear-gradient(45deg,
+      theme('colors.imperial.400'),
+      theme('colors.robots.500'),
+      theme('colors.aliens.500'),
+      theme('colors.imperial.400')) 1;
+  }
+
+  /* Scanline effect for futuristic displays */
+  .scanlines::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(
+      90deg,
+      transparent 98%,
+      rgba(255, 87, 34, 0.03) 100%
+    );
+    background-size: 3px 3px;
+    pointer-events: none;
+    animation: scan 2s linear infinite;
   }
 }

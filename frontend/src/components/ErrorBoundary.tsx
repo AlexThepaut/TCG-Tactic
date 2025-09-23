@@ -120,7 +120,7 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
               </h1>
               <p className="text-red-200">
                 {context === 'game'
-                  ? 'Something went wrong in TCG Tactique. Your progress has been saved.'
+                  ? 'Something went wrong in Echoes Of War. Your progress has been saved.'
                   : 'An unexpected error occurred. Please try again.'}
               </p>
             </div>

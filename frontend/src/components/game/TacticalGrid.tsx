@@ -67,21 +67,21 @@ const GridCell: React.FC<GridCellProps> = ({
   };
 
   const cellClassName = clsx(
-    'relative border-2 transition-all duration-200 cursor-pointer flex items-center justify-center',
+    'relative border-2 transition-all duration-300 cursor-pointer flex items-center justify-center group',
     {
       // Base states
-      'border-gray-600 bg-gray-800/50': !isPlayable && !card,
+      'border-gothic-medium/30 bg-gothic-darker/30': !isPlayable && !card,
       [getFactionColor(faction)]: isPlayable && !card,
-      'border-gray-500 bg-gray-700/80': card && !isHighlighted,
+      'border-imperial-600/50 bg-gothic-darkest/60': card && !isHighlighted,
 
       // Interactive states
-      'border-yellow-400 bg-yellow-400/20 animate-pulse': isPlayable && isOver && canDrop,
-      'border-yellow-300 bg-yellow-300/10': isHighlighted,
-      'border-red-400 bg-red-400/20 shadow-lg shadow-red-400/30': isAttackable,
+      'border-imperial-400 bg-imperial-500/20 animate-pulse shadow-lg shadow-imperial-500/30': isPlayable && isOver && canDrop,
+      'border-imperial-300 bg-imperial-400/20 box-glow-imperial': isHighlighted,
+      'border-blood-400 bg-blood-500/20 shadow-lg shadow-blood-500/50 animate-flicker': isAttackable,
 
       // Hover states
-      'hover:border-opacity-80 hover:bg-opacity-20': isInteractive,
-      'cursor-not-allowed opacity-50': !isPlayable && isInteractive,
+      'hover:border-opacity-80 hover:bg-opacity-30': isInteractive,
+      'cursor-not-allowed opacity-40': !isPlayable && isInteractive,
     }
   );
 
@@ -95,45 +95,49 @@ const GridCell: React.FC<GridCellProps> = ({
       layout
     >
       {/* Grid Position Indicator */}
-      <div className="absolute top-1 left-1 text-xs text-gray-500 font-mono">
+      <div className="absolute top-1 left-1 text-xs text-void-600 font-tech tracking-wider opacity-60">
         {position.y},{position.x}
       </div>
 
       {/* Card Display */}
       {card && (
         <motion.div
-          className="w-full h-full flex flex-col items-center justify-center p-1 bg-gray-900/80 rounded border border-gray-600"
+          className="w-full h-full flex flex-col items-center justify-center p-1 bg-gothic-darkest/90 border border-imperial-600/50 relative scanlines group"
           initial={{ scale: 0, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0, opacity: 0 }}
           transition={{ duration: 0.2 }}
         >
+          {/* Atmospheric effects */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+
           {/* Card Name */}
-          <div className="text-xs font-semibold text-white text-center leading-tight mb-1">
-            {card.name}
+          <div className="text-xs font-gothic font-bold text-imperial-200 text-center leading-tight mb-1 gothic-text-shadow tracking-wider">
+            {card.name.toUpperCase()}
           </div>
 
           {/* Stats */}
           <div className="flex items-center space-x-2 text-xs">
             {/* Attack */}
-            <div className="flex items-center text-red-400">
-              <span className="font-bold">{card.attack}</span>
+            <div className="flex items-center bg-blood-600/30 border border-blood-500/50 px-1 py-0.5">
+              <span className="font-tech font-bold text-blood-300">{card.attack}</span>
             </div>
 
             {/* Health */}
-            <div className="flex items-center text-green-400">
-              <span className="font-bold">{card.health}</span>
+            <div className="flex items-center bg-imperial-600/30 border border-imperial-500/50 px-1 py-0.5">
+              <span className="font-tech font-bold text-imperial-300">{card.health}</span>
               {card.maxHealth !== card.health && (
-                <span className="text-gray-400">/{card.maxHealth}</span>
+                <span className="text-void-400 font-tech">/{card.maxHealth}</span>
               )}
             </div>
           </div>
 
           {/* Faction Indicator */}
-          <div className={clsx('absolute bottom-1 right-1 w-2 h-2 rounded-full', {
-            'bg-blue-400': card.faction === 'humans',
-            'bg-purple-400': card.faction === 'aliens',
-            'bg-red-400': card.faction === 'robots',
+          <div className={clsx('absolute bottom-1 right-1 w-3 h-3 border-2 shadow-lg', {
+            'bg-humans-500 border-humans-400 shadow-humans-500/50': card.faction === 'humans',
+            'bg-aliens-500 border-aliens-400 shadow-aliens-500/50': card.faction === 'aliens',
+            'bg-robots-500 border-robots-400 shadow-robots-500/50': card.faction === 'robots',
           })} />
         </motion.div>
       )}
@@ -141,10 +145,15 @@ const GridCell: React.FC<GridCellProps> = ({
       {/* Drop Zone Indicator */}
       {isPlayable && !card && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className={clsx('w-6 h-6 rounded-full border-2 border-dashed transition-all duration-200', {
-            'border-yellow-400 bg-yellow-400/10': isOver && canDrop,
-            'border-gray-500': !isOver,
-          })} />
+          <div className={clsx('w-8 h-8 border-2 border-dashed transition-all duration-300 relative', {
+            'border-imperial-400 bg-imperial-500/20 shadow-lg shadow-imperial-500/30': isOver && canDrop,
+            'border-void-600/50': !isOver,
+          })}>
+            {isOver && canDrop && (
+              <div className="absolute inset-0 bg-imperial-500/10 animate-pulse"></div>
+            )}
+            <div className="w-2 h-2 bg-current opacity-50 mx-auto"></div>
+          </div>
         </div>
       )}
     </motion.div>
@@ -237,15 +246,20 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
       {/* Grid Container with Face-to-Face Rotation - Responsive */}
       <div className={clsx('relative flex justify-center w-full')}>
         <div
-          className={clsx('grid gap-1 border-2 border-gray-700 rounded-lg p-2 bg-gray-900/50 w-full aspect-[3/5]', {
-            'grid-cols-5': !faceToFace,
-            'grid-cols-3': faceToFace
+          className={clsx('grid gap-2 border-2 p-3 w-full aspect-[3/5] relative scanlines bg-gothic-darkest/60 backdrop-blur-sm', {
+            'grid-cols-5 border-imperial-700/50': !faceToFace,
+            'grid-cols-3 border-imperial-700/50': faceToFace
           })}
           style={{
             maxWidth: faceToFace ? '25dvw' : '800px',
             aspectRatio: faceToFace ? '3/5' : '5/3'
           }}
         >
+          {/* Atmospheric grid effects */}
+          <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-60"></div>
+          <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-60"></div>
+          <div className="absolute top-0 left-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-500 to-transparent opacity-40"></div>
+          <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-500 to-transparent opacity-40"></div>
           {transformedBoard.map((row, rowIndex) =>
             row.map((card, colIndex) => {
               // For faceToFace mode, we need to map back to original coordinates
