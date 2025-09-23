@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ma/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -10,52 +7,45 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// Users table for authentication and profile management
 model User {
-  id           Int      @id @default(autoincrement())
-  username     String   @unique @db.VarChar(50)
-  email        String   @unique @db.VarChar(100)
-  passwordHash String   @map("password_hash") @db.VarChar(255)
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  decks         Deck[]
-  gamesAsPlayer1 Game[] @relation("Player1")
-  gamesAsPlayer2 Game[] @relation("Player2")
-  gamesWon      Game[] @relation("Winner")
-  gameStatesAsPlayer1 GameState[] @relation("GameStatePlayer1")
-  gameStatesAsPlayer2 GameState[] @relation("GameStatePlayer2")
-  gameStatesAsCurrent GameState[] @relation("GameStateCurrentPlayer")
-  gameActions   GameAction[] @relation("GameActionPlayer")
-  userStats     UserStats?
+  id                  Int          @id @default(autoincrement())
+  username            String       @unique @db.VarChar(50)
+  email               String       @unique @db.VarChar(100)
+  passwordHash        String       @map("password_hash") @db.VarChar(255)
+  createdAt           DateTime     @default(now()) @map("created_at")
+  updatedAt           DateTime     @updatedAt @map("updated_at")
+  decks               Deck[]
+  gameActions         GameAction[] @relation("GameActionPlayer")
+  gameStatesAsCurrent GameState[]  @relation("GameStateCurrentPlayer")
+  gameStatesAsPlayer1 GameState[]  @relation("GameStatePlayer1")
+  gameStatesAsPlayer2 GameState[]  @relation("GameStatePlayer2")
+  gamesAsPlayer1      Game[]       @relation("Player1")
+  gamesAsPlayer2      Game[]       @relation("Player2")
+  gamesWon            Game[]       @relation("Winner")
+  userStats           UserStats?
 
   @@map("users")
 }
 
-// Active cards pool (240-360 cards in rotation)
 model ActiveCard {
-  id          String   @id @default(cuid())
-  name        String   @db.VarChar(100)
+  id          String     @id @default(cuid())
+  name        String     @db.VarChar(100)
   faction     Faction
   type        CardType
-  cost        Int      @db.SmallInt // 1-10 Void Echoes
-  attack      Int?     @db.SmallInt // NULL for spells, 0-20 for units
-  hp          Int?     @db.SmallInt // NULL for spells, 1-20 for units
-  range       Int?     @db.SmallInt // Attack range 1-3 for units
-  abilities   Json     @default("[]") @db.JsonB // Array of card abilities
-  description String?  @db.Text
-  flavorText  String?  @map("flavor_text") @db.Text
-  imageUrl    String?  @map("image_url") @db.VarChar(255)
-  setId       String   @map("set_id") @db.VarChar(20) // Rotation set identifier
-  isActive    Boolean  @default(true) @map("is_active")
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  cost        Int        @db.SmallInt
+  attack      Int?       @db.SmallInt
+  hp          Int?       @db.SmallInt
+  range       Int?       @db.SmallInt
+  abilities   Json       @default("[]")
+  description String?
+  flavorText  String?    @map("flavor_text")
+  imageUrl    String?    @map("image_url") @db.VarChar(255)
+  setId       String     @map("set_id") @db.VarChar(20)
+  isActive    Boolean    @default(true) @map("is_active")
+  createdAt   DateTime   @default(now()) @map("created_at")
+  updatedAt   DateTime   @updatedAt @map("updated_at")
+  deckCards   DeckCard[]
 
-  // Relations
-  deckCards DeckCard[]
-
-  // Constraints
   @@index([faction])
   @@index([type])
   @@index([cost])
@@ -64,136 +54,119 @@ model ActiveCard {
   @@map("active_cards")
 }
 
-// Faction definitions with formations and passive abilities
 model FactionData {
-  id             String @id // 'humans', 'aliens', 'robots'
+  id             String @id
   name           String @db.VarChar(50)
-  description    String @db.Text
-  formation      Json   @db.JsonB // 3x5 boolean grid
-  passiveAbility Json   @db.JsonB // Passive ability definition
-  colorTheme     String @db.VarChar(7) // Hex color code
+  description    String
+  formation      Json
+  passiveAbility Json
+  colorTheme     String @db.VarChar(7)
 
   @@map("factions")
 }
 
-// Card abilities reference table
 model CardAbility {
   id          String @id @db.VarChar(50)
   name        String @db.VarChar(100)
-  description String @db.Text
-  effectType  String @map("effect_type") @db.VarChar(30) // 'passive', 'triggered', 'activated'
-  parameters  Json   @default("{}") @db.JsonB
+  description String
+  effectType  String @map("effect_type") @db.VarChar(30)
+  parameters  Json   @default("{}")
 
   @@map("card_abilities")
 }
 
-// User decks (exactly 40 cards)
 model Deck {
-  id        Int      @id @default(autoincrement())
-  userId    Int      @map("user_id")
-  name      String   @db.VarChar(50)
-  faction   Faction
-  isValid   Boolean  @default(false) @map("is_valid")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user      User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  deckCards DeckCard[]
-  gamesAsPlayer1Deck Game[] @relation("Player1Deck")
-  gamesAsPlayer2Deck Game[] @relation("Player2Deck")
+  id                 Int        @id @default(autoincrement())
+  userId             Int        @map("user_id")
+  name               String     @db.VarChar(50)
+  faction            Faction
+  isValid            Boolean    @default(false) @map("is_valid")
+  createdAt          DateTime   @default(now()) @map("created_at")
+  updatedAt          DateTime   @updatedAt @map("updated_at")
+  deckCards          DeckCard[]
+  user               User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gamesAsPlayer1Deck Game[]     @relation("Player1Deck")
+  gamesAsPlayer2Deck Game[]     @relation("Player2Deck")
 
   @@index([userId])
   @@index([faction])
   @@map("decks")
 }
 
-// Cards in decks (max 4 per card)
 model DeckCard {
-  deckId   Int    @map("deck_id")
-  cardId   String @map("card_id")
-  quantity Int    @db.SmallInt // 1-4 per card
-
-  // Relations
-  deck Deck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
-  card ActiveCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  deckId   Int        @map("deck_id")
+  cardId   String     @map("card_id")
+  quantity Int        @db.SmallInt
+  card     ActiveCard @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  deck     Deck       @relation(fields: [deckId], references: [id], onDelete: Cascade)
 
   @@id([deckId, cardId])
   @@map("deck_cards")
 }
 
-// Game sessions
 model Game {
-  id            Int      @id @default(autoincrement())
-  player1Id     Int      @map("player1_id")
-  player2Id     Int      @map("player2_id")
-  player1DeckId Int      @map("player1_deck_id")
-  player2DeckId Int      @map("player2_deck_id")
-  winnerId      Int?     @map("winner_id")
-  durationSeconds Int?   @map("duration_seconds")
-  endReason     String?  @map("end_reason") @db.VarChar(50) // 'quest_completed', 'surrender', 'deck_empty'
-  createdAt     DateTime @default(now()) @map("created_at")
-  endedAt       DateTime? @map("ended_at")
-
-  // Relations
-  player1     User        @relation("Player1", fields: [player1Id], references: [id])
-  player2     User        @relation("Player2", fields: [player2Id], references: [id])
-  player1Deck Deck        @relation("Player1Deck", fields: [player1DeckId], references: [id])
-  player2Deck Deck        @relation("Player2Deck", fields: [player2DeckId], references: [id])
-  winner      User?       @relation("Winner", fields: [winnerId], references: [id])
-  gameStates  GameState[]
-  gameActions GameAction[]
+  id              Int          @id @default(autoincrement())
+  player1Id       Int          @map("player1_id")
+  player2Id       Int          @map("player2_id")
+  player1DeckId   Int          @map("player1_deck_id")
+  player2DeckId   Int          @map("player2_deck_id")
+  winnerId        Int?         @map("winner_id")
+  durationSeconds Int?         @map("duration_seconds")
+  endReason       String?      @map("end_reason") @db.VarChar(50)
+  createdAt       DateTime     @default(now()) @map("created_at")
+  endedAt         DateTime?    @map("ended_at")
+  gameActions     GameAction[]
+  gameStates      GameState[]
+  player1Deck     Deck         @relation("Player1Deck", fields: [player1DeckId], references: [id])
+  player1         User         @relation("Player1", fields: [player1Id], references: [id])
+  player2Deck     Deck         @relation("Player2Deck", fields: [player2DeckId], references: [id])
+  player2         User         @relation("Player2", fields: [player2Id], references: [id])
+  winner          User?        @relation("Winner", fields: [winnerId], references: [id])
 
   @@index([player1Id, player2Id])
   @@map("games")
 }
 
-// Game state snapshots for real-time gameplay
 model GameState {
-  id              Int       @id @default(autoincrement())
-  gameId          Int       @map("game_id")
-  player1Id       Int       @map("player1_id")
-  player2Id       Int       @map("player2_id")
-  currentPlayerId Int       @map("current_player")
-  turn            Int       @default(1)
-  phase           GamePhase @default(resources)
-  boardStateJson  Json      @map("board_state_json") @db.JsonB
-  createdAt       DateTime  @default(now()) @map("created_at")
-  updatedAt       DateTime  @updatedAt @map("updated_at")
-
-  // Relations
-  game          Game @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  player1       User @relation("GameStatePlayer1", fields: [player1Id], references: [id])
-  player2       User @relation("GameStatePlayer2", fields: [player2Id], references: [id])
-  currentPlayer User @relation("GameStateCurrentPlayer", fields: [currentPlayerId], references: [id])
-  gameActions   GameAction[]
+  id              Int          @id @default(autoincrement())
+  gameId          Int          @map("game_id")
+  player1Id       Int          @map("player1_id")
+  player2Id       Int          @map("player2_id")
+  currentPlayerId Int          @map("current_player")
+  turn            Int          @default(1)
+  phase           GamePhase    @default(resources)
+  boardStateJson  Json         @map("board_state_json")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+  gameActions     GameAction[]
+  currentPlayer   User         @relation("GameStateCurrentPlayer", fields: [currentPlayerId], references: [id])
+  game            Game         @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  player1         User         @relation("GameStatePlayer1", fields: [player1Id], references: [id])
+  player2         User         @relation("GameStatePlayer2", fields: [player2Id], references: [id])
 
   @@index([gameId])
   @@index([gameId, turn])
   @@map("game_states")
 }
 
-// Game actions log for debugging, replay, and undo functionality
 model GameAction {
-  id               String   @id @default(cuid())
-  gameId           Int      @map("game_id")
-  gameStateId      Int      @map("game_state_id")
-  playerId         Int      @map("player_id")
-  actionType       String   @map("action_type") @db.VarChar(30)
-  actionData       Json     @map("action_data") @db.JsonB
-  gameStateBefore  Json?    @map("game_state_before") @db.JsonB
-  gameStateAfter   Json?    @map("game_state_after") @db.JsonB
-  turn             Int      @default(1)
+  id               String    @id @default(cuid())
+  gameId           Int       @map("game_id")
+  gameStateId      Int       @map("game_state_id")
+  playerId         Int       @map("player_id")
+  actionType       String    @map("action_type") @db.VarChar(30)
+  actionData       Json      @map("action_data")
+  gameStateBefore  Json?     @map("game_state_before")
+  gameStateAfter   Json?     @map("game_state_after")
+  turn             Int       @default(1)
   phase            GamePhase @default(actions)
-  resourceCost     Int      @default(0) @map("resource_cost")
-  isValid          Boolean  @default(true) @map("is_valid")
-  validationErrors Json?    @map("validation_errors") @db.JsonB
-  timestamp        DateTime @default(now())
-
-  // Relations
-  game      Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
-  gameState GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
-  player    User      @relation("GameActionPlayer", fields: [playerId], references: [id])
+  resourceCost     Int       @default(0) @map("resource_cost")
+  isValid          Boolean   @default(true) @map("is_valid")
+  validationErrors Json?     @map("validation_errors")
+  timestamp        DateTime  @default(now())
+  game             Game      @relation(fields: [gameId], references: [id], onDelete: Cascade)
+  gameState        GameState @relation(fields: [gameStateId], references: [id], onDelete: Cascade)
+  player           User      @relation("GameActionPlayer", fields: [playerId], references: [id])
 
   @@index([gameId, turn])
   @@index([playerId])
@@ -202,7 +175,6 @@ model GameAction {
   @@map("game_actions")
 }
 
-// User statistics for performance tracking
 model UserStats {
   userId      Int      @id @map("user_id")
   totalGames  Int      @default(0) @map("total_games")
@@ -214,14 +186,11 @@ model UserStats {
   robotsGames Int      @default(0) @map("robots_games")
   robotsWins  Int      @default(0) @map("robots_wins")
   updatedAt   DateTime @updatedAt @map("updated_at")
-
-  // Relations
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("user_stats")
 }
 
-// Enums
 enum Faction {
   humans
   aliens

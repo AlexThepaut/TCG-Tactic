@@ -357,15 +357,15 @@ describe('Game Validation Service', () => {
 
       const validAction: GameAction = {
         id: 'action-1',
+        gameId: 1,
         playerId: 1, // Current player
-        type: 'end_turn',
+        actionType: 'end_turn',
         turn: 5,
         phase: 'actions',
         timestamp: new Date(),
-        data: { phase: 'actions', voluntaryEnd: true },
+        actionData: { phase: 'actions', voluntaryEnd: true },
         isValid: false,
-        resourceCost: 0,
-        involvedCards: []
+        resourceCost: 0
       };
 
       const result = gameValidationService.validateAction(mockGameState, validAction);
@@ -451,15 +451,15 @@ describe('Game Validation Service', () => {
 
       const invalidAction: GameAction = {
         id: 'action-1',
+        gameId: 1,
         playerId: 2, // Wrong player
-        type: 'end_turn',
+        actionType: 'end_turn',
         turn: 5,
         phase: 'actions',
         timestamp: new Date(),
-        data: { phase: 'actions', voluntaryEnd: true },
+        actionData: { phase: 'actions', voluntaryEnd: true },
         isValid: false,
-        resourceCost: 0,
-        involvedCards: []
+        resourceCost: 0
       };
 
       const result = gameValidationService.validateAction(mockGameState, invalidAction);
@@ -629,8 +629,16 @@ describe('Quest Service', () => {
       } as any;
 
       const mockAction = {
+        id: 'test-action',
+        gameId: 1,
         playerId: 1,
-        type: 'attack'
+        actionType: 'attack',
+        turn: 1,
+        phase: 'actions',
+        timestamp: new Date(),
+        actionData: {},
+        isValid: true,
+        resourceCost: 0
       } as GameAction;
 
       const mockResults = [{

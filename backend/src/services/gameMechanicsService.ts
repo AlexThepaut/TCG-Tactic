@@ -76,7 +76,7 @@ export class GameMechanicsService {
       loggers.game.info('Executing game action', {
         gameId: gameState.id,
         actionId: action.id,
-        type: action.type,
+        type: action.actionType,
         playerId: action.playerId
       });
 
@@ -88,7 +88,7 @@ export class GameMechanicsService {
       newState.lastActionAt = new Date();
 
       // Execute action based on type
-      switch (action.type) {
+      switch (action.actionType) {
         case 'place_unit':
           const placeResults = this.executePlaceUnit(newState, action);
           newState.players = placeResults.newState.players;
@@ -120,7 +120,7 @@ export class GameMechanicsService {
           break;
 
         default:
-          loggers.game.warn('Unknown action type', { actionType: action.type });
+          loggers.game.warn('Unknown action type', { actionType: action.actionType });
           break;
       }
 
@@ -329,7 +329,7 @@ export class GameMechanicsService {
   }
 
   private executePlaceUnit(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
-    const data = action.data as PlaceUnitActionData;
+    const data = action.actionData as PlaceUnitActionData;
     const results: GameActionResult[] = [];
 
     const playerState = getPlayerState(gameState, action.playerId);
@@ -382,7 +382,7 @@ export class GameMechanicsService {
   }
 
   private executeAttack(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
-    const data = action.data as AttackActionData;
+    const data = action.actionData as AttackActionData;
     const results: GameActionResult[] = [];
 
     const playerState = getPlayerState(gameState, action.playerId);
@@ -460,7 +460,7 @@ export class GameMechanicsService {
   }
 
   private executeCastSpell(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
-    const data = action.data as CastSpellActionData;
+    const data = action.actionData as CastSpellActionData;
     const results: GameActionResult[] = [];
 
     const playerState = getPlayerState(gameState, action.playerId);
@@ -607,7 +607,7 @@ export class GameMechanicsService {
       case 'on_unit_destroyed':
         return results.some(r => r.type === 'card_destroyed');
       case 'turn_start':
-        return action.type === 'end_turn';
+        return action.actionType === 'end_turn';
       default:
         return false;
     }
@@ -792,7 +792,7 @@ export class GameMechanicsService {
       switch (playerState.questProgress.questId) {
         case 'tactical_superiority':
           // Control grid positions
-          if (action.type === 'place_unit') {
+          if (action.actionType === 'place_unit') {
             progressIncrease = 1;
           }
           break;
@@ -804,7 +804,7 @@ export class GameMechanicsService {
 
         case 'swarm_victory':
           // Summon units
-          if (action.type === 'place_unit') {
+          if (action.actionType === 'place_unit') {
             progressIncrease = 1;
           }
           break;

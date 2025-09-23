@@ -1,6 +1,12 @@
 /**
- * Game Event Handlers
+ * Game Event Handlers - Enhanced for Task 1.3B
  * Integrated with comprehensive game state management services
+ *
+ * Enhancements:
+ * - Performance monitoring for <100ms Socket.io synchronization
+ * - Enhanced error handling with Task 1.3B error codes
+ * - Real-time state broadcasting optimization
+ * - Comprehensive placement validation integration
  */
 import { Server as SocketIOServer } from 'socket.io';
 import { v4 as uuidv4 } from 'uuid';
@@ -41,9 +47,105 @@ import { gameValidationService } from '../../services/gameValidationService';
 import { gameMechanicsService } from '../../services/gameMechanicsService';
 import { questService } from '../../services/questService';
 import { placementService } from '../../services/placementService';
+import { gameStateRepository } from '../../repositories/GameStateRepository';
+import { gameActionLogger } from '../../services/GameActionLogger';
+import {
+  PLACEMENT_ERROR_CODES,
+  formatErrorForClient,
+  createDetailedError
+} from '../../utils/errorCodes';
+import { performanceMonitor } from '../../utils/performanceMonitor';
 
 // Game timeout management
 const gameTimeouts = new Map<string, NodeJS.Timeout>();
+
+/**
+ * Optimized broadcasting helper functions for Task 1.3B requirements
+ */
+
+/**
+ * Broadcast message to all players in game room with performance monitoring
+ */
+async function broadcastToGameRoom(
+  io: SocketIOServer,
+  gameId: string,
+  event: string,
+  data: any
+): Promise<void> {
+  const startTime = performance.now();
+
+  try {
+    io.to(`game:${gameId}`).emit(event, data);
+
+    const duration = performance.now() - startTime;
+    if (duration > 10) { // Log if broadcast takes >10ms
+      loggers.game.warn('Slow game room broadcast', {
+        gameId,
+        event,
+        duration: `${duration.toFixed(2)}ms`
+      });
+    }
+  } catch (error) {
+    loggers.game.error('Game room broadcast failed', {
+      gameId,
+      event,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+    throw error;
+  }
+}
+
+/**
+ * Broadcast to spectators with optimized delivery
+ */
+async function broadcastToSpectators(
+  io: SocketIOServer,
+  gameId: string,
+  event: string,
+  data: any
+): Promise<void> {
+  try {
+    io.to(`spectator:${gameId}`).emit(event, data);
+  } catch (error) {
+    loggers.game.debug('Spectator broadcast failed (non-critical)', {
+      gameId,
+      event,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+}
+
+/**
+ * Convert new GameState format to legacy format for backward compatibility
+ */
+function convertToLegacyFormat(gameState: GameState): any {
+  return {
+    id: gameState.id,
+    gameId: gameState.gameId,
+    player1: gameState.players.player1,
+    player2: gameState.players.player2,
+    currentPlayer: gameState.currentPlayer,
+    turn: gameState.turn,
+    phase: gameState.phase,
+    gameOver: gameState.gameOver,
+    winner: gameState.winner,
+    timeRemaining: gameState.timeRemaining
+  };
+}
+
+/**
+ * Convert GameAction to legacy format
+ */
+function convertActionToLegacy(action: any): any {
+  return {
+    id: action.id,
+    playerId: action.playerId,
+    type: action.actionType,
+    data: action.actionData,
+    timestamp: action.timestamp,
+    resourceCost: action.resourceCost
+  };
+}
 
 /**
  * Setup game-related event handlers
@@ -468,7 +570,8 @@ async function handleGameReady(
 }
 
 /**
- * Handle unit placement with enhanced PlacementService integration
+ * Handle unit placement - Enhanced for Task 1.3B
+ * Performance requirement: <100ms for Socket.io synchronization
  */
 async function handlePlaceUnit(
   socket: AuthenticatedSocket,
@@ -476,12 +579,16 @@ async function handlePlaceUnit(
   data: PlaceUnitData,
   callback: (response: GameActionResponse) => void
 ): Promise<void> {
+  const startTime = performance.now();
+
   try {
+    // Enhanced permission and game validation
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'place_unit')) {
-      return callback({
-        success: false,
-        error: 'Invalid game permission or not in game'
+      const error = createDetailedError('not_your_turn', {
+        socketId: socket.id,
+        gameId: socket.gameId
       });
+      return callback(formatErrorForClient(error));
     }
 
     const userId = parseInt(socket.userData?.userId || '0');
@@ -495,12 +602,15 @@ async function handlePlaceUnit(
       handIndex: data.handIndex
     });
 
-    // Use PlacementService for comprehensive validation and execution
-    const placementResult = await placementService.executePlacement(
-      socket.gameId,
-      userId,
-      data.cardId,
-      position
+    // Use enhanced PlacementService with performance monitoring
+    const placementResult = await performanceMonitor.monitorSocketOperation(
+      () => placementService.executePlacement(
+        socket.gameId!,
+        userId,
+        data.cardId,
+        position
+      ),
+      'placement_execution'
     );
 
     if (!placementResult.success) {
@@ -513,26 +623,45 @@ async function handlePlaceUnit(
         errorCode: placementResult.errorCode
       });
 
+      // Return standardized error response per Task 1.3B
       return callback({
         success: false,
         error: placementResult.error || 'Unit placement failed'
       });
     }
 
-    // Convert to legacy format for broadcast
-    const legacyState = convertToLegacyFormat(placementResult.gameState!);
-    const legacyAction = placementResult.action ? convertActionToLegacy(placementResult.action) : null;
+    // Optimized real-time state broadcasting with performance monitoring
+    await performanceMonitor.monitorSocketOperation(
+      async () => {
+        // Convert to legacy format for backward compatibility
+        const legacyState = convertToLegacyFormat(placementResult.gameState!);
+        const legacyAction = placementResult.action ? convertActionToLegacy(placementResult.action) : null;
 
-    // Broadcast placement success to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', legacyAction);
-    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
+        // Broadcast updates to all players in game room (Task 1.3B requirement)
+        await Promise.all([
+          // Broadcast action performed
+          broadcastToGameRoom(io, socket.gameId!, 'game:action_performed', legacyAction),
+          // Broadcast state update
+          broadcastToGameRoom(io, socket.gameId!, 'game:state_update', legacyState),
+          // Broadcast to spectators if any
+          broadcastToSpectators(io, socket.gameId!, 'game:placement_result', {
+            success: true,
+            action: legacyAction
+          })
+        ]);
+
+        return legacyState;
+      },
+      'state_broadcast'
+    );
 
     // Send detailed response to placing player
+    const duration = performance.now() - startTime;
     callback({
       success: true,
       message: 'Unit placed successfully',
-      gameState: legacyState as any,
-      action: legacyAction
+      gameState: convertToLegacyFormat(placementResult.gameState!) as any,
+      action: placementResult.action ? convertActionToLegacy(placementResult.action) : null
     });
 
     loggers.game.info('Unit placement completed successfully', {
@@ -540,7 +669,8 @@ async function handlePlaceUnit(
       userId,
       cardId: data.cardId,
       position,
-      resourceCost: placementResult.action?.resourceCost || 0
+      resourceCost: placementResult.action?.resourceCost || 0,
+      duration: `${duration.toFixed(2)}ms`
     });
 
   } catch (error: any) {
@@ -596,15 +726,15 @@ async function handleAttack(
 
     const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
+      gameId: parseInt(socket.gameId!),
       playerId: userId,
-      type: 'attack',
+      actionType: 'attack',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: actionData,
+      actionData: actionData,
       isValid: false,
-      resourceCost: 0,
-      involvedCards: []
+      resourceCost: 0
     };
 
     // Validate action
@@ -693,15 +823,15 @@ async function handleCastSpell(
 
     const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
+      gameId: parseInt(socket.gameId!),
       playerId: userId,
-      type: 'cast_spell',
+      actionType: 'cast_spell',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: actionData,
+      actionData: actionData,
       isValid: false,
-      resourceCost: 0,
-      involvedCards: []
+      resourceCost: 0
     };
 
     // Validate and execute action
@@ -772,18 +902,18 @@ async function handleEndTurn(
     // Create end turn action
     const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
+      gameId: parseInt(socket.gameId!),
       playerId: userId,
-      type: 'end_turn',
+      actionType: 'end_turn',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: {
+      actionData: {
         phase: gameState.phase,
         voluntaryEnd: true
       },
       isValid: false,
-      resourceCost: 0,
-      involvedCards: []
+      resourceCost: 0
     };
 
     // Validate action
@@ -873,15 +1003,15 @@ async function handleSurrender(
     // Create surrender action
     const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
+      gameId: parseInt(socket.gameId!),
       playerId: userId,
-      type: 'surrender',
+      actionType: 'surrender',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: { reason: 'voluntary_surrender' },
+      actionData: { reason: 'voluntary_surrender' },
       isValid: true,
-      resourceCost: 0,
-      involvedCards: []
+      resourceCost: 0
     };
 
     // Execute surrender
@@ -966,15 +1096,15 @@ async function autoEndTurn(
     // Create automatic end turn action
     const action: import('../../types/gameState').GameAction = {
       id: uuidv4(),
+      gameId: parseInt(gameId),
       playerId: playerId,
-      type: 'end_turn',
+      actionType: 'end_turn',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: { phase: gameState.phase, voluntaryEnd: false },
+      actionData: { phase: gameState.phase, voluntaryEnd: false },
       isValid: true,
-      resourceCost: 0,
-      involvedCards: []
+      resourceCost: 0
     };
 
     // Execute end turn
@@ -998,31 +1128,6 @@ async function autoEndTurn(
 // Conversion functions for legacy compatibility
 
 /**
- * Convert new GameState to legacy format for Socket.io compatibility
- */
-function convertToLegacyFormat(gameState: GameState): any {
-  return {
-    id: gameState.id,
-    status: gameState.status,
-    players: {
-      player1: convertPlayerToLegacy(gameState.players.player1),
-      player2: convertPlayerToLegacy(gameState.players.player2)
-    },
-    currentPlayer: gameState.currentPlayer.toString(),
-    turn: gameState.turn,
-    phase: gameState.phase,
-    timeLimit: gameState.timeLimit,
-    timeRemaining: gameState.timeRemaining,
-    gameStartedAt: gameState.gameStartedAt,
-    lastActionAt: gameState.lastActionAt,
-    gameOver: gameState.gameOver,
-    winner: gameState.winner?.toString(),
-    winCondition: gameState.winCondition,
-    spectators: gameState.spectators
-  };
-}
-
-/**
  * Convert PlayerState to legacy format
  */
 function convertPlayerToLegacy(playerState: PlayerState): any {
@@ -1039,17 +1144,3 @@ function convertPlayerToLegacy(playerState: PlayerState): any {
   };
 }
 
-/**
- * Convert GameAction to legacy format
- */
-function convertActionToLegacy(action: import('../../types/gameState').GameAction): any {
-  return {
-    id: action.id,
-    playerId: action.playerId.toString(),
-    type: action.type,
-    data: action.data,
-    timestamp: action.timestamp,
-    turn: action.turn,
-    phase: action.phase
-  };
-}

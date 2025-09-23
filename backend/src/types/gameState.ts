@@ -136,25 +136,33 @@ export interface QuestMilestone {
 // Game action interface with comprehensive data
 export interface GameAction {
   id: string;
+  gameId: number;
   playerId: number;
-  type: GameActionType;
+  actionType: GameActionType;
   turn: number;
   phase: GamePhase;
   timestamp: Date;
 
   // Action-specific data
-  data: GameActionData;
+  actionData: any;
+
+  // State tracking
+  stateBefore?: GameState;
+  stateAfter?: GameState;
 
   // Validation and results
+  success?: boolean;
+  error?: string | undefined;
   isValid: boolean;
   validationErrors?: string[];
-  results?: GameActionResult[];
 
   // Resource cost
   resourceCost: number;
 
-  // Cards involved
-  involvedCards: string[];
+  // Correlation tracking
+  correlationId?: string;
+  duration?: number;
+  metadata?: any;
 }
 
 // Game action types

@@ -172,7 +172,7 @@ export class QuestService {
       loggers.game.error('Quest progress update failed', {
         questId: playerState.questProgress.questId,
         playerId: playerState.id,
-        actionType: action.type,
+        actionType: action.actionType,
         error: error.message
       });
       return false;
@@ -484,7 +484,7 @@ export class QuestService {
 
   private createTerritoryControlCondition(targetPositions: number): QuestCondition {
     return (gameState: GameState, playerState: PlayerState, action: GameAction, results: GameActionResult[]): number => {
-      if (action.type === 'place_unit') {
+      if (action.actionType === 'place_unit') {
         const currentPositions = this.countUnitsOnBoard(playerState);
         return Math.max(0, currentPositions - playerState.questProgress.currentValue);
       }
@@ -547,7 +547,7 @@ export class QuestService {
 
   private createSummonCondition(): QuestCondition {
     return (gameState: GameState, playerState: PlayerState, action: GameAction, results: GameActionResult[]): number => {
-      if (action.playerId === playerState.id && action.type === 'place_unit') {
+      if (action.playerId === playerState.id && action.actionType === 'place_unit') {
         return 1;
       }
       return 0;
@@ -556,11 +556,11 @@ export class QuestService {
 
   private createAdvancedUnitCondition(): QuestCondition {
     return (gameState: GameState, playerState: PlayerState, action: GameAction, results: GameActionResult[]): number => {
-      if (action.playerId === playerState.id && action.type === 'place_unit') {
+      if (action.playerId === playerState.id && action.actionType === 'place_unit') {
         const placedCard = results.find(r => r.type === 'card_placed');
         if (placedCard) {
           // Check if the placed unit has cost 7 or higher
-          const handIndex = (action.data as any).handIndex;
+          const handIndex = (action.actionData as any).handIndex;
           const card = playerState.hand[handIndex];
           if (card && card.cost >= 7) {
             return 1;

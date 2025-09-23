@@ -1,7 +1,13 @@
 /**
- * Placement Service
+ * Placement Service - Enhanced for Task 1.3B
  * Core service for tactical unit placement with faction-specific formation validation
  * and resource management for TCG Tactique
+ *
+ * Enhancements:
+ * - Integrated GameStateRepository for optimistic locking
+ * - GameActionLogger for comprehensive action tracking
+ * - Performance monitoring for <50ms validation requirement
+ * - Standardized error codes per Task 1.3B specification
  */
 import { prisma } from '../lib/database';
 import { logger, loggers } from '../utils/logger';
@@ -22,6 +28,16 @@ import {
 import { Card, Faction } from '../types/database';
 import { gameStateService } from './gameStateService';
 import { gameValidationService } from './gameValidationService';
+import { gameStateRepository } from '../repositories/GameStateRepository';
+import { gameActionLogger } from './GameActionLogger';
+import {
+  PLACEMENT_ERROR_CODES,
+  PlacementErrorCode,
+  mapValidationErrorToCode,
+  createDetailedError,
+  formatErrorForClient
+} from '../utils/errorCodes';
+import { performanceMonitor, MonitorPerformance } from '../utils/performanceMonitor';
 
 /**
  * Placement result interface for unit placement operations
@@ -46,20 +62,9 @@ export interface PlacementValidationResult extends ValidationResult {
 }
 
 /**
- * Placement error codes for specific error handling
+ * Placement error codes - using standardized codes from Task 1.3B
  */
-export type PlacementErrorCode =
-  | 'INVALID_POSITION'
-  | 'INSUFFICIENT_RESOURCES'
-  | 'NOT_YOUR_TURN'
-  | 'INVALID_CARD'
-  | 'POSITION_OCCUPIED'
-  | 'INVALID_FORMATION_POSITION'
-  | 'GAME_NOT_ACTIVE'
-  | 'PLAYER_NOT_FOUND'
-  | 'CARD_NOT_IN_HAND'
-  | 'NOT_UNIT_CARD'
-  | 'PLACEMENT_SERVICE_ERROR';
+export type { PlacementErrorCode } from '../utils/errorCodes';
 
 /**
  * Formation helper interface
@@ -90,8 +95,10 @@ export class PlacementService {
   }
 
   /**
-   * Validate unit placement before execution
+   * Validate unit placement before execution - Enhanced for Task 1.3B
+   * Performance requirement: <50ms validation time
    */
+  @MonitorPerformance('validation')
   async validatePlacement(
     gameId: string,
     playerId: number,
@@ -106,9 +113,18 @@ export class PlacementService {
         position
       });
 
-      // Get current game state
-      const gameState = await gameStateService.getGameState(gameId);
+      // Get current game state using new repository
+      const gameState = await gameStateRepository.findById(gameId);
       if (!gameState) {
+        const error = createDetailedError('game_not_found', { gameId });
+        await gameActionLogger.logValidationFailure(
+          gameId,
+          playerId,
+          'place_unit',
+          { cardId, position },
+          ['Game not found']
+        );
+
         return {
           canPlace: false,
           isValid: false,
@@ -117,90 +133,41 @@ export class PlacementService {
           positionOccupied: false,
           errors: [{
             code: 'GAME_NOT_FOUND',
-            message: 'Game state not found',
+            message: error.message,
             severity: 'error'
           }],
           warnings: []
         };
       }
 
-      // Basic game state validation
-      const stateValidation = this.validateGameState(gameState, playerId);
-      if (!stateValidation.isValid) {
-        return {
-          canPlace: false,
-          resourceCost: 0,
-          formationValid: false,
-          positionOccupied: false,
-          ...stateValidation
-        };
-      }
-
-      const playerState = getPlayerState(gameState, playerId);
-      if (!playerState) {
-        return {
-          canPlace: false,
-          isValid: false,
-          resourceCost: 0,
-          formationValid: false,
-          positionOccupied: false,
-          errors: [{
-            code: 'PLAYER_NOT_FOUND',
-            message: 'Player not found in game',
-            severity: 'error'
-          }],
-          warnings: []
-        };
-      }
-
-      // Find card in player's hand
-      const cardIndex = playerState.hand.findIndex(card => card.id === cardId);
-      if (cardIndex === -1) {
-        return {
-          canPlace: false,
-          isValid: false,
-          resourceCost: 0,
-          formationValid: false,
-          positionOccupied: false,
-          errors: [{
-            code: 'CARD_NOT_IN_HAND',
-            message: 'Card not found in player hand',
-            severity: 'error'
-          }],
-          warnings: []
-        };
-      }
-
-      const card = playerState.hand[cardIndex]!;
-
-      // Comprehensive placement validation
-      const validation = this.performComprehensiveValidation(
+      // Enhanced validation with performance tracking
+      const validationResults = await this.performComprehensiveValidation(
         gameState,
-        playerState,
-        card,
-        cardIndex,
+        playerId,
+        cardId,
         position
       );
 
-      loggers.game.debug('Placement validation completed', {
-        gameId,
-        playerId,
-        cardId,
-        position,
-        canPlace: validation.canPlace,
-        errors: validation.errors.length
-      });
+      // Log validation result for audit
+      if (!validationResults.canPlace) {
+        await gameActionLogger.logValidationFailure(
+          gameId,
+          playerId,
+          'place_unit',
+          { cardId, position },
+          validationResults.errors.map(e => e.message)
+        );
+      }
 
-      return validation;
+      return validationResults;
 
-    } catch (error: any) {
+    } catch (error) {
       loggers.game.error('Placement validation failed', {
         gameId,
         playerId,
         cardId,
         position,
-        error: error.message,
-        stack: error.stack
+        error: error instanceof Error ? error.message : 'Unknown error'
       });
 
       return {
@@ -211,7 +178,7 @@ export class PlacementService {
         positionOccupied: false,
         errors: [{
           code: 'PLACEMENT_SERVICE_ERROR',
-          message: `Validation failed: ${error.message}`,
+          message: error instanceof Error ? error.message : 'Unknown validation error',
           severity: 'error'
         }],
         warnings: []
@@ -220,14 +187,170 @@ export class PlacementService {
   }
 
   /**
-   * Execute unit placement with atomic state updates
+   * Perform comprehensive validation with all Task 1.3B requirements
    */
+  private async performComprehensiveValidation(
+    gameState: GameState,
+    playerId: number,
+    cardId: string,
+    position: GridPosition
+  ): Promise<PlacementValidationResult> {
+    const errors: any[] = [];
+    const warnings: any[] = [];
+    let resourceCost = 0;
+    let formationValid = false;
+    let positionOccupied = false;
+
+    // 1. Basic game state validation
+    const stateValidation = this.validateGameState(gameState, playerId);
+    if (!stateValidation.isValid) {
+      errors.push(...stateValidation.errors);
+    }
+
+    // 2. Get player state
+    const playerState = getPlayerState(gameState, playerId);
+    if (!playerState) {
+      errors.push({
+        code: 'PLAYER_NOT_FOUND',
+        message: 'Player not found in game',
+        severity: 'error'
+      });
+      return {
+        canPlace: false,
+        isValid: false,
+        resourceCost: 0,
+        formationValid: false,
+        positionOccupied: false,
+        errors,
+        warnings
+      };
+    }
+
+    // 3. Find and validate card in hand
+    const cardIndex = playerState.hand.findIndex(card => card.id === cardId);
+    if (cardIndex === -1) {
+      errors.push({
+        code: mapValidationErrorToCode('card_not_in_hand'),
+        message: 'Card not found in player hand',
+        severity: 'error'
+      });
+    } else {
+      const card = playerState.hand[cardIndex];
+      if (!card) {
+        errors.push({
+          code: 'INVALID_CARD',
+          message: 'Card not found in hand',
+          severity: 'error'
+        });
+        return {
+          canPlace: false,
+          isValid: false,
+          resourceCost: 0,
+          formationValid: false,
+          positionOccupied: false,
+          errors,
+          warnings
+        };
+      }
+
+      resourceCost = card.cost;
+
+      // 4. Validate card type (must be unit for placement)
+      if (card.type !== 'unit') {
+        errors.push({
+          code: mapValidationErrorToCode('invalid_card_type'),
+          message: 'Only unit cards can be placed on the board',
+          severity: 'error'
+        });
+      }
+
+      // 5. Resource validation (Task 1.3B requirement)
+      if (playerState.resources < resourceCost) {
+        errors.push({
+          code: PLACEMENT_ERROR_CODES.INSUFFICIENT_RESOURCES,
+          message: `Insufficient Void Echoes: need ${resourceCost}, have ${playerState.resources}`,
+          severity: 'error'
+        });
+      }
+
+      // 6. Formation validation (Task 1.3B requirement)
+      formationValid = this.validateFormationPosition(playerState.faction, position);
+      if (!formationValid) {
+        errors.push({
+          code: PLACEMENT_ERROR_CODES.INVALID_POSITION,
+          message: `Position ${position.col},${position.row} not valid for ${playerState.faction} formation`,
+          severity: 'error'
+        });
+      }
+
+      // 7. Position occupation check (Task 1.3B requirement)
+      positionOccupied = this.isPositionOccupied(playerState.board, position);
+      if (positionOccupied) {
+        errors.push({
+          code: PLACEMENT_ERROR_CODES.POSITION_OCCUPIED,
+          message: `Position ${position.col},${position.row} is already occupied`,
+          severity: 'error'
+        });
+      }
+
+      // 8. Grid bounds validation
+      if (!isValidGridPosition(position)) {
+        errors.push({
+          code: PLACEMENT_ERROR_CODES.INVALID_POSITION,
+          message: `Position ${(position as any).col},${(position as any).row} is outside valid grid bounds`,
+          severity: 'error'
+        });
+      }
+    }
+
+    return {
+      canPlace: errors.length === 0,
+      isValid: errors.length === 0,
+      resourceCost,
+      formationValid,
+      positionOccupied,
+      errors,
+      warnings
+    };
+  }
+
+  /**
+   * Enhanced formation validation for all three factions
+   */
+  private validateFormationPosition(faction: Faction, position: GridPosition): boolean {
+    const formation = FACTION_FORMATIONS[faction];
+    if (!formation || !(formation as any)[position.row] || (formation as any)[position.row][position.col] === undefined) {
+      return false;
+    }
+    return (formation as any)[position.row][position.col];
+  }
+
+  /**
+   * Check if position is occupied on the board
+   */
+  private isPositionOccupied(board: (BoardCard | null)[][], position: GridPosition): boolean {
+    if (!board[position.row]) {
+      return false;
+    }
+    const cell = board[position.row]![position.col];
+    return cell !== null;
+  }
+
+  /**
+   * Execute unit placement with atomic state updates - Enhanced for Task 1.3B
+   * Performance requirement: Complete operation in <100ms including DB persistence
+   */
+  @MonitorPerformance('database')
   async executePlacement(
     gameId: string,
     playerId: number,
     cardId: string,
     position: GridPosition
   ): Promise<PlacementResult> {
+    const operationStart = performance.now();
+    let stateBefore: GameState | undefined;
+    let stateAfter: GameState | undefined;
+
     try {
       loggers.game.info('Executing unit placement', {
         gameId,
@@ -236,9 +359,17 @@ export class PlacementService {
         position
       });
 
-      // Pre-validation
+      // Pre-validation with performance monitoring
       const validation = await this.validatePlacement(gameId, playerId, cardId, position);
       if (!validation.canPlace) {
+        await gameActionLogger.logValidationFailure(
+          gameId,
+          playerId,
+          'place_unit',
+          { cardId, position },
+          validation.errors.map(e => e.message)
+        );
+
         return {
           success: false,
           error: validation.errors[0]?.message || 'Placement validation failed',
@@ -247,28 +378,41 @@ export class PlacementService {
         };
       }
 
-      // Get current game state with optimistic locking
-      const gameState = await gameStateService.getGameState(gameId);
+      // Get current game state using repository with optimistic locking
+      const gameState = await gameStateRepository.findById(gameId);
       if (!gameState) {
+        await gameActionLogger.logValidationFailure(
+          gameId,
+          playerId,
+          'place_unit',
+          { cardId, position },
+          ['Game state not found']
+        );
+
         return {
           success: false,
           error: 'Game state not found',
-          errorCode: 'GAME_NOT_ACTIVE'
+          errorCode: PLACEMENT_ERROR_CODES.INVALID_CARD
         };
       }
 
+      stateBefore = { ...gameState };
       const playerState = getPlayerState(gameState, playerId);
       if (!playerState) {
         return {
           success: false,
           error: 'Player not found in game',
-          errorCode: 'PLAYER_NOT_FOUND'
+          errorCode: PLACEMENT_ERROR_CODES.INVALID_CARD
         };
       }
 
       // Find card in hand
       const cardIndex = playerState.hand.findIndex(card => card.id === cardId);
-      const card = playerState.hand[cardIndex]!;
+      const card = playerState.hand[cardIndex];
+
+      if (!card) {
+        throw new Error('Card not found in hand');
+      }
 
       // Execute placement atomically
       const placementResult = this.performAtomicPlacement(
@@ -280,22 +424,24 @@ export class PlacementService {
         validation.resourceCost
       );
 
-      // Persist updated state to database
-      const updatedGameState = await gameStateService.updateGameState(
+      stateAfter = placementResult.newState;
+
+      // Persist updated state using repository with optimistic locking
+      const updatedGameState = await gameStateRepository.update(
         gameId,
         placementResult.newState,
         gameState.version
       );
 
-      // Log action to database
-      await this.logPlacementAction(
+      // Log successful placement action
+      const actionDuration = performance.now() - operationStart;
+      await gameActionLogger.logPlacementAction(
         gameId,
-        updatedGameState.gameId,
         playerId,
-        card,
-        position,
-        validation.resourceCost,
-        placementResult.action
+        { cardId, position, resourceCost: validation.resourceCost },
+        stateBefore!,
+        updatedGameState,
+        true
       );
 
       loggers.game.info('Unit placement executed successfully', {
@@ -325,7 +471,7 @@ export class PlacementService {
       return {
         success: false,
         error: `Placement failed: ${error.message}`,
-        errorCode: 'PLACEMENT_SERVICE_ERROR'
+        errorCode: 'PLACEMENT_SERVICE_ERROR' as PlacementErrorCode
       };
     }
   }
@@ -476,6 +622,8 @@ export class PlacementService {
     };
   }
 
+  // DUPLICATE FUNCTION - COMMENTED OUT TO FIX COMPILATION
+  /*
   private performComprehensiveValidation(
     gameState: GameState,
     playerState: PlayerState,
@@ -555,6 +703,7 @@ export class PlacementService {
       warnings
     };
   }
+  */
 
   private performAtomicPlacement(
     gameState: GameState,
@@ -608,20 +757,20 @@ export class PlacementService {
     // Create action record
     const action: GameAction = {
       id: `place_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      gameId: gameState.gameId,
       playerId: playerState.id,
-      type: 'place_unit',
+      actionType: 'place_unit',
       turn: gameState.turn,
       phase: gameState.phase,
       timestamp: new Date(),
-      data: {
+      actionData: {
         cardId: parseInt(card.id),
         handIndex: cardIndex,
         position,
         resourceCost
       } as PlaceUnitActionData,
       isValid: true,
-      resourceCost,
-      involvedCards: [card.id]
+      resourceCost
     };
 
     // Add to action history

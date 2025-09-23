@@ -386,7 +386,7 @@ describe('PlacementService', () => {
       expect(result.success).toBe(true);
       expect(result.gameState).toBeDefined();
       expect(result.action).toBeDefined();
-      expect(result.action?.type).toBe('place_unit');
+      expect(result.action?.actionType).toBe('place_unit');
       expect(result.action?.resourceCost).toBe(2);
     });
 
@@ -428,7 +428,7 @@ describe('PlacementService', () => {
           }),
           actionHistory: expect.arrayContaining([
             expect.objectContaining({
-              type: 'place_unit',
+              actionType: 'place_unit',
               playerId: 1
             })
           ])

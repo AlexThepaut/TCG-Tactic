@@ -261,7 +261,7 @@ export class GameValidationService {
   validateMove(gameState: GameState, action: GameAction): ValidationResult {
     const errors: any[] = [];
 
-    switch (action.type) {
+    switch (action.actionType) {
       case 'place_unit':
         const placeValidation = this.validateUnitPlacement(gameState, action);
         errors.push(...placeValidation.errors);
@@ -356,7 +356,7 @@ export class GameValidationService {
     const errors: any[] = [];
 
     // Validate action structure
-    if (!action.id || !action.playerId || !action.type) {
+    if (!action.id || !action.playerId || !action.actionType) {
       errors.push({
         code: 'INVALID_ACTION_STRUCTURE',
         message: 'Action must have valid ID, player ID, and type',
@@ -401,10 +401,10 @@ export class GameValidationService {
   private validateActionPhase(gameState: GameState, action: GameAction): ValidationResult {
     const errors: any[] = [];
 
-    if (!canPerformAction(gameState, action.playerId, action.type)) {
+    if (!canPerformAction(gameState, action.playerId, action.actionType)) {
       errors.push({
         code: 'INVALID_ACTION_FOR_PHASE',
-        message: `Action ${action.type} cannot be performed during ${gameState.phase} phase`,
+        message: `Action ${action.actionType} cannot be performed during ${gameState.phase} phase`,
         severity: 'error'
       });
     }
@@ -417,7 +417,7 @@ export class GameValidationService {
   }
 
   private validateSpecificAction(gameState: GameState, action: GameAction): ValidationResult {
-    switch (action.type) {
+    switch (action.actionType) {
       case 'place_unit':
         return this.validateUnitPlacement(gameState, action);
       case 'attack':
@@ -439,7 +439,7 @@ export class GameValidationService {
 
   private validateUnitPlacement(gameState: GameState, action: GameAction): ValidationResult {
     const errors: any[] = [];
-    const data = action.data as PlaceUnitActionData;
+    const data = action.actionData as PlaceUnitActionData;
 
     if (!data) {
       errors.push({
@@ -497,7 +497,7 @@ export class GameValidationService {
 
   private validateAttack(gameState: GameState, action: GameAction): ValidationResult {
     const errors: any[] = [];
-    const data = action.data as AttackActionData;
+    const data = action.actionData as AttackActionData;
 
     if (!data) {
       errors.push({
@@ -579,7 +579,7 @@ export class GameValidationService {
 
   private validateSpellCast(gameState: GameState, action: GameAction): ValidationResult {
     const errors: any[] = [];
-    const data = action.data as CastSpellActionData;
+    const data = action.actionData as CastSpellActionData;
 
     if (!data) {
       errors.push({
