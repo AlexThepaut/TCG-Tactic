@@ -23,20 +23,108 @@ const Home = () => {
   }, []);
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center p-4 relative">
-      {/* Atmospheric effects */}
-      <div className="absolute inset-0 overflow-hidden">
-        {/* Floating embers */}
-        <div className="absolute top-20 left-20 w-2 h-2 bg-robots-500 rounded-full animate-ember opacity-60"></div>
-        <div className="absolute top-32 right-32 w-1 h-1 bg-imperial-400 rounded-full animate-ember opacity-40" style={{ animationDelay: '1s' }}></div>
-        <div className="absolute bottom-40 left-40 w-1.5 h-1.5 bg-robots-600 rounded-full animate-ember opacity-50" style={{ animationDelay: '2s' }}></div>
+    <>
+      {/* Warhammer 40K Grimdark Space Background */}
+      <div className="fixed inset-0 bg-gradient-to-b from-gothic-black via-gothic-darkest to-gothic-darker z-0">
+        {/* Distant stars - cold and merciless - spread across full width */}
+        <div className="absolute inset-0">
+          {/* Left side stars */}
+          <div className="absolute top-1/6" style={{ left: '8%' }}>
+            <div className="w-0.5 h-0.5 bg-blood-500 rounded-full animate-twinkle opacity-25"></div>
+          </div>
+          <div className="absolute bottom-1/4" style={{ left: '15%' }}>
+            <div className="w-px h-px bg-gothic-silver rounded-full animate-twinkle-slow opacity-20"></div>
+          </div>
+          <div className="absolute top-2/3" style={{ left: '25%' }}>
+            <div className="w-0.5 h-0.5 bg-imperial-600 rounded-full animate-twinkle opacity-30"></div>
+          </div>
 
-        {/* Scanning beams */}
-        <div className="absolute top-0 left-1/4 w-px h-32 bg-gradient-to-b from-imperial-400 to-transparent opacity-30 animate-flicker"></div>
-        <div className="absolute top-0 right-1/3 w-px h-24 bg-gradient-to-b from-robots-500 to-transparent opacity-20 animate-flicker" style={{ animationDelay: '1.5s' }}></div>
+          {/* Center stars */}
+          <div className="absolute top-1/8" style={{ left: '45%' }}>
+            <div className="w-px h-px bg-imperial-500 rounded-full animate-twinkle-delayed opacity-35"></div>
+          </div>
+          <div className="absolute bottom-1/3" style={{ left: '55%' }}>
+            <div className="w-0.5 h-0.5 bg-gothic-chrome rounded-full animate-twinkle-slow opacity-25"></div>
+          </div>
+
+          {/* Right side stars */}
+          <div className="absolute top-1/3" style={{ left: '75%' }}>
+            <div className="w-px h-px bg-imperial-500 rounded-full animate-twinkle-delayed opacity-30"></div>
+          </div>
+          <div className="absolute bottom-1/6" style={{ left: '85%' }}>
+            <div className="w-px h-px bg-blood-600 rounded-full animate-twinkle-delayed opacity-20"></div>
+          </div>
+          <div className="absolute top-1/8" style={{ left: '92%' }}>
+            <div className="w-px h-px bg-gothic-steel rounded-full animate-twinkle-slow opacity-25"></div>
+          </div>
+        </div>
+
+        {/* Dark Energy Storms - spread across screen */}
+        <div className="absolute top-1/5 w-60 h-60 bg-gradient-radial from-gothic-dark/15 via-blood-900/8 to-transparent rounded-full animate-warp-storm opacity-40" style={{ left: '70%' }}></div>
+        <div className="absolute bottom-1/4 w-48 h-48 bg-gradient-radial from-blood-800/10 via-gothic-darkest/6 to-transparent rounded-full animate-warp-storm opacity-35" style={{ left: '15%', animationDelay: '3s' }}></div>
+        <div className="absolute top-1/2 w-40 h-40 bg-gradient-radial from-imperial-800/6 via-gothic-darker/4 to-transparent rounded-full animate-warp-storm opacity-25" style={{ left: '45%', animationDelay: '6s' }}></div>
+
+        {/* Battle-scarred planets - distributed across full width */}
+        <div className="absolute top-1/8 w-24 h-24" style={{ left: '20%' }}>
+          <div className="relative w-full h-full animate-orbit-slow">
+            {/* Death world */}
+            <div className="w-10 h-10 bg-gradient-to-br from-gothic-darker via-blood-900 to-gothic-black rounded-full animate-imperial-glow border border-blood-800/20"
+                 style={{ boxShadow: '0 0 15px #450a0a, inset 0 0 20px rgba(0,0,0,0.9)' }}></div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-1/6 w-32 h-32" style={{ left: '75%' }}>
+          <div className="relative w-full h-full animate-orbit-reverse">
+            {/* Forge world */}
+            <div className="w-12 h-12 bg-gradient-to-br from-robots-800 via-imperial-800 to-gothic-black rounded-full animate-plasma-glow border border-imperial-700/30"
+                 style={{ boxShadow: '0 0 20px #7c4f0d, inset 0 0 25px rgba(0,0,0,0.95)' }}></div>
+          </div>
+        </div>
+
+        <div className="absolute top-1/3 w-20 h-20" style={{ left: '50%' }}>
+          <div className="relative w-full h-full animate-orbit">
+            {/* Corrupted world */}
+            <div className="w-8 h-8 bg-gradient-to-br from-blood-800 via-gothic-dark to-gothic-black rounded-full animate-chaos-pulse border border-blood-700/30"
+                 style={{ boxShadow: '0 0 20px #7f1d1d, inset 0 0 15px rgba(0,0,0,0.95)' }}></div>
+          </div>
+        </div>
+
+        {/* Space Hulks and debris - across full width */}
+        <div className="absolute top-1/4 w-16 h-3 bg-gradient-to-r from-transparent via-gothic-steel/20 to-transparent animate-void-drift opacity-25" style={{ left: '10%' }}></div>
+        <div className="absolute bottom-1/3 w-12 h-2 bg-gradient-to-r from-transparent via-imperial-700/15 to-transparent animate-void-drift opacity-20" style={{ left: '80%', animationDelay: '6s' }}></div>
+        <div className="absolute top-2/3 w-8 h-1 bg-gradient-to-r from-transparent via-blood-800/15 to-transparent animate-void-drift opacity-18" style={{ left: '35%', animationDelay: '9s' }}></div>
+        <div className="absolute bottom-1/5 w-20 h-4 bg-gradient-to-r from-transparent via-gothic-dark/12 to-transparent animate-void-drift opacity-15" style={{ left: '60%', animationDelay: '12s' }}></div>
+
+        {/* Dark energy lightning - spread across screen */}
+        <div className="absolute top-1/6 w-px h-16 bg-gradient-to-b from-blood-600 via-blood-700 to-transparent animate-warp-lightning opacity-40" style={{ left: '25%' }}></div>
+        <div className="absolute bottom-1/5 w-px h-12 bg-gradient-to-b from-imperial-600 via-blood-700 to-transparent animate-warp-lightning opacity-35" style={{ left: '65%', animationDelay: '1.5s' }}></div>
+        <div className="absolute top-1/2 w-px h-20 bg-gradient-to-b from-imperial-500 via-blood-600 to-transparent animate-warp-lightning opacity-30" style={{ left: '85%', animationDelay: '3s' }}></div>
+        <div className="absolute top-3/4 w-px h-14 bg-gradient-to-b from-gothic-chrome via-imperial-600 to-transparent animate-warp-lightning opacity-25" style={{ left: '40%', animationDelay: '4.5s' }}></div>
+
+        {/* Battle sparks and energy discharge - distributed */}
+        <div className="absolute top-1/3 w-1 h-1 bg-imperial-600 rounded-full animate-battle-spark opacity-45" style={{ left: '30%' }}></div>
+        <div className="absolute bottom-1/4 w-0.5 h-0.5 bg-robots-600 rounded-full animate-battle-spark opacity-40" style={{ left: '70%', animationDelay: '2s' }}></div>
+        <div className="absolute top-2/3 w-1 h-1 bg-blood-600 rounded-full animate-battle-spark opacity-35" style={{ left: '90%', animationDelay: '4s' }}></div>
+        <div className="absolute bottom-1/3 w-0.5 h-0.5 bg-gothic-chrome rounded-full animate-battle-spark opacity-40" style={{ left: '15%', animationDelay: '6s' }}></div>
+        <div className="absolute top-1/5 w-1 h-1 bg-imperial-700 rounded-full animate-battle-spark opacity-45" style={{ left: '55%', animationDelay: '8s' }}></div>
+
+        {/* Void rifts - horizontal across different widths */}
+        <div className="absolute top-1/5 w-32 h-1 bg-gradient-to-r from-transparent via-gothic-black via-gothic-darkest to-transparent opacity-50 animate-pulse-slow" style={{ left: '60%' }}></div>
+        <div className="absolute bottom-1/6 w-24 h-0.5 bg-gradient-to-r from-transparent via-gothic-darkest via-gothic-darker to-transparent opacity-45 animate-pulse-slow" style={{ left: '25%', animationDelay: '2s' }}></div>
+        <div className="absolute top-3/5 w-40 h-1.5 bg-gradient-to-r from-transparent via-blood-900 via-gothic-black to-transparent opacity-40 animate-pulse-slow" style={{ left: '75%', animationDelay: '4s' }}></div>
+
+        {/* Atmospheric haze of war - darker */}
+        <div className="absolute inset-0 bg-gradient-to-t from-blood-900/3 via-transparent to-gothic-black/15 opacity-70"></div>
+        <div className="absolute inset-0 bg-gradient-to-br from-transparent via-imperial-900/2 to-gothic-darker/10 opacity-60"></div>
+
+        {/* Deep grimdark overlay */}
+        <div className="absolute inset-0 bg-gradient-to-b from-gothic-black/10 via-gothic-black/25 to-gothic-darkest/40 opacity-85"></div>
+        <div className="absolute inset-0 bg-gradient-to-r from-gothic-black/5 via-transparent to-gothic-black/5 opacity-75"></div>
       </div>
 
-      <div className="text-center max-w-6xl mx-auto relative z-10">
+      {/* Content Container */}
+      <div className="min-h-screen flex flex-col justify-center items-center p-4 relative z-10">
+        <div className="text-center max-w-6xl mx-auto relative">
         {/* Hero Section */}
         <div className="mb-16">
           {/* Gothic decoration */}
@@ -170,8 +258,9 @@ const Home = () => {
             "In War's Echo, Legends Are Born"
           </p>
         </div>
+        </div>
       </div>
-    </div>
+    </>
   );
 };
 

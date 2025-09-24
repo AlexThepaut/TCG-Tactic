@@ -40,59 +40,54 @@
 
   /* Icon glow effects using drop-shadow for better icon rendering */
   .icon-glow-imperial {
-    filter: drop-shadow(0 0 3px theme('colors.imperial.400'))
-            drop-shadow(0 0 6px theme('colors.imperial.500'));
+    filter: drop-shadow(0 0 1px theme('colors.imperial.400'))
+            drop-shadow(0 0 2px theme('colors.imperial.500'));
   }
 
   .icon-glow-humans {
-    filter: drop-shadow(0 0 3px theme('colors.humans.400'))
-            drop-shadow(0 0 6px theme('colors.humans.500'));
+    filter: drop-shadow(0 0 1px theme('colors.humans.400'))
+            drop-shadow(0 0 2px theme('colors.humans.500'));
   }
 
   .icon-glow-aliens {
-    filter: drop-shadow(0 0 3px theme('colors.aliens.400'))
-            drop-shadow(0 0 6px theme('colors.aliens.500'));
+    filter: drop-shadow(0 0 1px theme('colors.aliens.400'))
+            drop-shadow(0 0 2px theme('colors.aliens.500'));
   }
 
   .icon-glow-robots {
-    filter: drop-shadow(0 0 3px theme('colors.robots.400'))
-            drop-shadow(0 0 6px theme('colors.robots.500'));
+    filter: drop-shadow(0 0 1px theme('colors.robots.400'))
+            drop-shadow(0 0 2px theme('colors.robots.500'));
   }
 
   .icon-glow-void {
-    filter: drop-shadow(0 0 3px theme('colors.void.400'))
-            drop-shadow(0 0 6px theme('colors.void.500'));
+    filter: drop-shadow(0 0 1px theme('colors.void.400'))
+            drop-shadow(0 0 2px theme('colors.void.500'));
   }
 
   /* Box glow effects for containers and backgrounds */
   .box-glow-imperial {
-    box-shadow: 0 0 10px theme('colors.imperial.400'),
-                0 0 20px theme('colors.imperial.500'),
-                0 0 30px theme('colors.imperial.600');
+    box-shadow: 0 0 4px theme('colors.imperial.400'),
+                0 0 8px theme('colors.imperial.500');
   }
 
   .box-glow-humans {
-    box-shadow: 0 0 10px theme('colors.humans.400'),
-                0 0 20px theme('colors.humans.500'),
-                0 0 30px theme('colors.humans.600');
+    box-shadow: 0 0 4px theme('colors.humans.400'),
+                0 0 8px theme('colors.humans.500');
   }
 
   .box-glow-aliens {
-    box-shadow: 0 0 10px theme('colors.aliens.400'),
-                0 0 20px theme('colors.aliens.500'),
-                0 0 30px theme('colors.aliens.600');
+    box-shadow: 0 0 4px theme('colors.aliens.400'),
+                0 0 8px theme('colors.aliens.500');
   }
 
   .box-glow-robots {
-    box-shadow: 0 0 10px theme('colors.robots.400'),
-                0 0 20px theme('colors.robots.500'),
-                0 0 30px theme('colors.robots.600');
+    box-shadow: 0 0 4px theme('colors.robots.400'),
+                0 0 8px theme('colors.robots.500');
   }
 
   .box-glow-void {
-    box-shadow: 0 0 10px theme('colors.void.400'),
-                0 0 20px theme('colors.void.500'),
-                0 0 30px theme('colors.void.600');
+    box-shadow: 0 0 4px theme('colors.void.400'),
+                0 0 8px theme('colors.void.500');
   }
 
   /* Holographic border effect */
@@ -120,5 +115,37 @@
     background-size: 3px 3px;
     pointer-events: none;
     animation: scan 2s linear infinite;
+  }
+
+  /* Gothic card frame styling */
+  .gothic-card-frame {
+    position: relative;
+    background-image:
+      linear-gradient(135deg, rgba(184, 134, 11, 0.1) 0%, transparent 25%),
+      linear-gradient(225deg, rgba(124, 79, 13, 0.1) 0%, transparent 25%);
+  }
+
+  .gothic-card-frame::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 2px;
+    background: linear-gradient(45deg,
+      rgba(184, 134, 11, 0.6),
+      rgba(124, 79, 13, 0.4),
+      rgba(92, 58, 10, 0.6)
+    );
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask-composite: subtract;
+    pointer-events: none;
+    opacity: 0.3;
+  }
+
+  /* Enhanced gothic text shadow for cards */
+  .gothic-text-shadow {
+    text-shadow:
+      1px 1px 2px rgba(0, 0, 0, 0.8),
+      0 0 4px rgba(184, 134, 11, 0.3);
   }
 }

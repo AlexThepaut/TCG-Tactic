@@ -118,6 +118,27 @@ export default {
         'scan': 'scan 2s linear infinite',
         'hologram': 'hologram 4s ease-in-out infinite',
         'ember': 'ember 1.5s ease-in-out infinite alternate',
+        // Space animations
+        'twinkle': 'twinkle 4s ease-in-out infinite',
+        'twinkle-delayed': 'twinkle 4s ease-in-out infinite 1s',
+        'twinkle-slow': 'twinkle 6s ease-in-out infinite 2s',
+        'orbit': 'orbit 20s linear infinite',
+        'orbit-reverse': 'orbit 25s linear infinite reverse',
+        'orbit-slow': 'orbit 30s linear infinite',
+        'shooting-star': 'shootingStar 3s ease-out infinite',
+        'shooting-star-delayed': 'shootingStar 4s ease-out infinite 2s',
+        'float': 'float 8s ease-in-out infinite',
+        'float-delayed': 'float 10s ease-in-out infinite 3s',
+        'nebula-drift': 'nebulaDrift 15s ease-in-out infinite',
+        'planet-glow': 'planetGlow 3s ease-in-out infinite alternate',
+        // Warhammer 40K animations
+        'warp-storm': 'warpStorm 8s ease-in-out infinite',
+        'warp-lightning': 'warpLightning 2s ease-in-out infinite',
+        'imperial-glow': 'imperialGlow 4s ease-in-out infinite alternate',
+        'chaos-pulse': 'chaosPulse 3s ease-in-out infinite',
+        'void-drift': 'voidDrift 12s linear infinite',
+        'battle-spark': 'battleSpark 1.5s ease-out infinite',
+        'plasma-glow': 'plasmaGlow 2.5s ease-in-out infinite alternate',
       },
       keyframes: {
         fadeIn: {
@@ -159,6 +180,129 @@ export default {
           '0%': { boxShadow: '0 0 5px #ff5722' },
           '100%': { boxShadow: '0 0 15px #ff5722, 0 0 25px #ff5722' },
         },
+        // Space keyframes
+        twinkle: {
+          '0%, 100%': { opacity: '0.3', transform: 'scale(0.8)' },
+          '50%': { opacity: '1', transform: 'scale(1.2)' },
+        },
+        orbit: {
+          '0%': { transform: 'rotate(0deg) translateX(100px) rotate(0deg)' },
+          '100%': { transform: 'rotate(360deg) translateX(100px) rotate(-360deg)' },
+        },
+        shootingStar: {
+          '0%': {
+            transform: 'translateX(-100px) translateY(-100px) rotate(-45deg)',
+            opacity: '0',
+          },
+          '10%': { opacity: '1' },
+          '90%': { opacity: '1' },
+          '100%': {
+            transform: 'translateX(100vw) translateY(100vh) rotate(-45deg)',
+            opacity: '0',
+          },
+        },
+        float: {
+          '0%, 100%': { transform: 'translateY(0px) rotate(0deg)' },
+          '50%': { transform: 'translateY(-20px) rotate(180deg)' },
+        },
+        nebulaDrift: {
+          '0%, 100%': {
+            transform: 'translateX(0px) translateY(0px) scale(1)',
+            opacity: '0.1',
+          },
+          '33%': {
+            transform: 'translateX(20px) translateY(-10px) scale(1.1)',
+            opacity: '0.2',
+          },
+          '66%': {
+            transform: 'translateX(-15px) translateY(15px) scale(0.9)',
+            opacity: '0.15',
+          },
+        },
+        planetGlow: {
+          '0%': {
+            boxShadow: '0 0 20px currentColor, inset 0 0 20px rgba(255, 255, 255, 0.1)',
+          },
+          '100%': {
+            boxShadow: '0 0 40px currentColor, 0 0 60px currentColor, inset 0 0 20px rgba(255, 255, 255, 0.2)',
+          },
+        },
+        // Warhammer 40K keyframes
+        warpStorm: {
+          '0%, 100%': {
+            transform: 'scale(1) rotate(0deg)',
+            opacity: '0.3',
+            filter: 'hue-rotate(0deg)',
+          },
+          '33%': {
+            transform: 'scale(1.2) rotate(120deg)',
+            opacity: '0.7',
+            filter: 'hue-rotate(60deg)',
+          },
+          '66%': {
+            transform: 'scale(0.8) rotate(240deg)',
+            opacity: '0.5',
+            filter: 'hue-rotate(-30deg)',
+          },
+        },
+        warpLightning: {
+          '0%, 90%, 100%': { opacity: '0' },
+          '10%, 15%, 25%, 30%': { opacity: '1' },
+          '20%': { opacity: '0.5' },
+        },
+        imperialGlow: {
+          '0%': {
+            boxShadow: '0 0 15px #b8860b, 0 0 30px #b8860b, inset 0 0 10px rgba(184, 134, 11, 0.2)',
+          },
+          '100%': {
+            boxShadow: '0 0 25px #d4761a, 0 0 50px #eaa64f, 0 0 75px #b8860b, inset 0 0 15px rgba(234, 166, 79, 0.3)',
+          },
+        },
+        chaosPulse: {
+          '0%, 100%': {
+            transform: 'scale(1)',
+            boxShadow: '0 0 20px #dc2626, 0 0 40px #991b1b',
+            filter: 'hue-rotate(0deg)',
+          },
+          '50%': {
+            transform: 'scale(1.1)',
+            boxShadow: '0 0 30px #b91c1c, 0 0 60px #dc2626, 0 0 90px #7f1d1d',
+            filter: 'hue-rotate(20deg)',
+          },
+        },
+        voidDrift: {
+          '0%': { transform: 'translateX(-100px) translateY(0px) rotate(0deg)' },
+          '25%': { transform: 'translateX(50px) translateY(-30px) rotate(90deg)' },
+          '50%': { transform: 'translateX(100px) translateY(0px) rotate(180deg)' },
+          '75%': { transform: 'translateX(50px) translateY(30px) rotate(270deg)' },
+          '100%': { transform: 'translateX(-100px) translateY(0px) rotate(360deg)' },
+        },
+        battleSpark: {
+          '0%': {
+            opacity: '0',
+            transform: 'scale(0.5) rotate(0deg)',
+          },
+          '10%': {
+            opacity: '1',
+            transform: 'scale(1.2) rotate(45deg)',
+          },
+          '20%': {
+            opacity: '0.8',
+            transform: 'scale(0.8) rotate(90deg)',
+          },
+          '100%': {
+            opacity: '0',
+            transform: 'scale(0.3) rotate(180deg)',
+          },
+        },
+        plasmaGlow: {
+          '0%': {
+            boxShadow: '0 0 10px #3b82f6, 0 0 20px #1d4ed8, inset 0 0 5px rgba(59, 130, 246, 0.3)',
+          },
+          '100%': {
+            boxShadow: '0 0 20px #60a5fa, 0 0 40px #3b82f6, 0 0 60px #1e40af, inset 0 0 10px rgba(96, 165, 250, 0.5)',
+          },
+        },
       },
       spacing: {
         '18': '4.5rem',
@@ -168,6 +312,9 @@ export default {
       aspectRatio: {
         'card': '63/88', // Standard playing card ratio
         'grid': '5/3',  // Game grid ratio
+      },
+      backgroundImage: {
+        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
       },
     },
   },

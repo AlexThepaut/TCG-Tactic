@@ -3,6 +3,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import GameBoard from '@/components/game/GameBoard';
+import HearthstoneHand from '@/components/game/HearthstoneHand';
 import useGameSocket from '@/hooks/useGameSocket';
 import { useGameState, useGameLoading, useGameActions, useConnectionState, useGameStore } from '@/stores';
 import type { GameState, GameCard, Faction } from '@/types';
@@ -232,6 +233,26 @@ const Game = () => {
     }
   }, [useMockData, leaveGame, navigate]);
 
+  // Hand interaction handlers
+  const handleCardSelect = useCallback((card: GameCard, index: number) => {
+    console.log('Card selected from hand:', card.name, 'at index', index);
+    // TODO: Implement card selection logic
+    toast.info(`Selected: ${card.name}`);
+  }, []);
+
+  const handleCardDragStart = useCallback((card: GameCard, index: number) => {
+    console.log('Card drag started:', card.name, 'from index', index);
+    // TODO: Implement drag start logic (e.g., highlight valid drop zones)
+  }, []);
+
+  const handleCardDragEnd = useCallback((card: GameCard, index: number, didDrop: boolean) => {
+    console.log('Card drag ended:', card.name, 'dropped:', didDrop);
+    // TODO: Implement card play logic if dropped successfully
+    if (didDrop) {
+      toast.success(`Played: ${card.name}`);
+    }
+  }, []);
+
   // Loading state
   if (isLoading) {
     return (
@@ -373,6 +394,18 @@ const Game = () => {
         onTurnEnd={handleTurnEnd}
         onSurrender={handleSurrender}
       />
+
+      {/* Player Hand */}
+      {gameState.players.player1 && (
+        <HearthstoneHand
+          cards={gameState.players.player1.hand}
+          faction={gameState.players.player1.faction}
+          resources={gameState.players.player1.resources}
+          onCardSelect={handleCardSelect}
+          onCardDragStart={handleCardDragStart}
+          onCardDragEnd={handleCardDragEnd}
+        />
+      )}
     </div>
   );
 };
