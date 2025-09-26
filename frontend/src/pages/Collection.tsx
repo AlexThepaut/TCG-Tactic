@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import UnifiedCard from '@/components/shared/UnifiedCard';
+import type { GameCard, Faction } from '@/types';
 
 const Collection = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -117,10 +119,10 @@ const Collection = () => {
         </div>
 
         {/* Cards Grid - Tactical Display */}
-        <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
-          {/* Mock card entries */}
+        <div className="flex flex-wrap justify-center gap-4">
+          {/* Mock card entries using UnifiedCard */}
           {Array.from({ length: 24 }).map((_, i) => {
-            const mockFactions = ['humans', 'aliens', 'robots'] as const;
+            const mockFactions: Faction[] = ['humans', 'aliens', 'robots'];
             const faction = mockFactions[i % 3];
             const factionNames = {
               humans: 'IMPERIAL',
@@ -128,37 +130,30 @@ const Collection = () => {
               robots: 'MACHINE'
             };
 
+            // Create mock card data
+            const mockCard: GameCard = {
+              id: `collection-mock-${i}`,
+              name: `${factionNames[faction as keyof typeof factionNames]} ECHO ${i + 1}`,
+              cost: (i % 10) + 1,
+              attack: (i % 5) + 1,
+              health: (i % 5) + 2,
+              maxHealth: (i % 5) + 2,
+              faction: faction as Faction,
+              type: i % 2 === 0 ? 'unit' : 'spell',
+              abilities: i % 3 === 0 ? [`${factionNames[faction as keyof typeof factionNames]} tactical ability`, 'Enhanced combat protocols'] : [],
+              range: i % 2 === 0 ? (i % 3) + 1 : undefined, // Units have range 1-3, spells don't
+              rarity: (['common', 'rare', 'epic', 'legendary'] as const)[i % 4]
+            };
+
             return (
-              <div
+              <UnifiedCard
                 key={i}
-                className={`bg-gothic-darkest/60 border-2 border-${faction}-600/50 hover:border-${faction}-400 p-4 relative group transition-all duration-500 hover:scale-105 overflow-hidden`}
-              >
-                <div className={`absolute inset-0 bg-gradient-to-br from-${faction}-900/20 to-${faction}-700/10 opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-
-                <div className="relative z-10">
-                  <div className="aspect-card bg-gothic-darker rounded-md mb-3 flex items-center justify-center text-void-500 text-xs font-tech border border-gothic-medium/30">
-                    <span className="gothic-text-shadow">CLASSIFIED</span>
-                  </div>
-
-                  <h3 className={`font-gothic font-bold text-${faction}-300 mb-1 text-sm gothic-text-shadow tracking-wider`}>
-                    {factionNames[faction]} ECHO {i + 1}
-                  </h3>
-
-                  <div className={`flex justify-between text-xs text-${faction}-400 font-tech tracking-wide mb-2`}>
-                    <span>VOID: {(i % 10) + 1}</span>
-                    <span>WAR: {(i % 5) + 1}/{(i % 5) + 2}</span>
-                  </div>
-
-                  {/* Tactical data strip */}
-                  <div className={`text-xs text-${faction}-500 font-tech opacity-70`}>
-                    ID: EOW-{i.toString().padStart(3, '0')}
-                  </div>
-                </div>
-
-                {/* Border glow effects */}
-                <div className={`absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${faction}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                <div className={`absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${faction}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-              </div>
+                card={mockCard}
+                context="collection"
+                cardSize="xl"
+                onClick={() => console.log(`Clicked card: ${mockCard.name}`)}
+                className="group"
+              />
             );
           })}
         </div>

@@ -12,7 +12,7 @@ import {
   CogIcon,
 } from '@heroicons/react/24/outline';
 import useGameSocket from '@/hooks/useGameSocket';
-import { getFactionClasses, formatFactionName } from '@/utils/factionThemes';
+import { formatFactionName } from '@/utils/factionThemes';
 import PlayerPanel from './PlayerPanel';
 import TacticalGrid from './TacticalGrid';
 import type { GameState } from '@/types';
@@ -131,8 +131,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setShowSurrenderConfirm(false);
   }, []);
 
-  // Get faction styling for current player
-  const factionClasses = getFactionClasses(currentPlayer.faction, 'primary');
 
   // Detect touch device for DnD backend
   const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;

@@ -3,7 +3,7 @@ import { useDrop } from 'react-dnd';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useGridLayout } from '@/hooks/useResponsiveLayout';
-import { getFactionClasses, formatFactionName, getFactionFormation } from '@/utils/factionThemes';
+import { getFactionClasses } from '@/utils/factionThemes';
 import type { GameCard, GamePosition } from '@/types';
 
 export interface TacticalGridProps {
@@ -41,8 +41,6 @@ const GridCell: React.FC<GridCellProps> = ({
   isHighlighted,
   isAttackable,
   isInteractive,
-  cellWidth,
-  cellHeight,
   faction,
   onClick,
   onDrop,
@@ -90,8 +88,8 @@ const GridCell: React.FC<GridCellProps> = ({
       ref={drop}
       className={clsx(cellClassName, 'aspect-square w-full h-full min-h-0')}
       onClick={() => isInteractive && onClick?.(position)}
-      whileHover={isInteractive ? { scale: 1.02 } : undefined}
-      whileTap={isInteractive ? { scale: 0.98 } : undefined}
+      {...(isInteractive && { whileHover: { scale: 1.02 } })}
+      {...(isInteractive && { whileTap: { scale: 0.98 } })}
       layout
     >
       {/* Grid Position Indicator */}
@@ -169,12 +167,11 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
   attackableCells = [],
   onCellClick,
   onCardDrop,
-  rotated = false,
   faceToFace = false,
   className,
 }) => {
   const gridLayout = useGridLayout(faction);
-  const { cellWidth, cellHeight, formationCells } = gridLayout;
+  const { formationCells } = gridLayout;
 
   // Memoize highlighted positions for performance
   const highlightedPositions = useMemo(() => {
@@ -200,14 +197,14 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
     // Original board[row][col] -> transformed[col][row]
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 5; col++) {
-        if (board[row] && board[row][col] !== undefined) {
+        if (board[row]?.[col] !== undefined) {
           if (player === 'current') {
             // For current player, flip horizontally so it faces the opponent
             // Map to transformed[col][2-row] to flip the rows
-            transformed[col][2 - row] = board[row][col];
+            transformed[col][2 - row] = board[row]![col];
           } else {
             // For opponent, keep normal transformation
-            transformed[col][row] = board[row][col];
+            transformed[col][row] = board[row]![col];
           }
         }
       }
@@ -226,13 +223,13 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
     // Map original formation 3x5 to new 5x3
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 5; col++) {
-        if (formationCells[row] && formationCells[row][col] !== undefined) {
+        if (formationCells[row]?.[col] !== undefined) {
           if (player === 'current') {
             // For current player, flip horizontally to face opponent
-            transformed[col][2 - row] = formationCells[row][col];
+            transformed[col][2 - row] = formationCells[row]![col];
           } else {
             // For opponent, keep normal transformation
-            transformed[col][row] = formationCells[row][col];
+            transformed[col][row] = formationCells[row]![col];
           }
         }
       }

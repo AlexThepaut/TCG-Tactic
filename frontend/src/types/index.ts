@@ -57,8 +57,9 @@ export interface GameCard {
   faction: Faction;
   type: 'unit' | 'spell';
   abilities: string[];
+  range?: number;
   imageUrl?: string;
-  rarity?: 'common' | 'rare' | 'epic' | 'legendary';
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
 }
 
 export interface PlayerData {

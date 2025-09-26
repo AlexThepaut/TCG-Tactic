@@ -4,7 +4,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   EyeIcon,
   ChevronRightIcon,
-  ChevronDownIcon,
   DocumentTextIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline';

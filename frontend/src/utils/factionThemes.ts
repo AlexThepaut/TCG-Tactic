@@ -205,7 +205,7 @@ export const getFactionTheme = (faction: Faction): FactionTheme => {
 export const getFactionClasses = (
   faction: Faction,
   variant: 'primary' | 'secondary' | 'accent' | 'subtle' = 'primary'
-) => {
+): string => {
   const theme = getFactionTheme(faction);
 
   switch (variant) {

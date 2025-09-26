@@ -3,7 +3,7 @@
  * Bottom-positioned hand with hover expansion and drag functionality
  * Warhammer 40K themed with grimdark aesthetic
  */
-import React, { memo, useState, useCallback, useMemo } from 'react';
+import React, { memo, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import type { GameCard, Faction } from '@/types';
@@ -38,7 +38,6 @@ const CardInHand: React.FC<CardInHandProps> = ({
   onDragEnd
 }) => {
   const canAfford = card.cost <= resources;
-  const [isDragging, setIsDragging] = useState(false);
 
   // Calculate card positioning
   const needsOverlap = totalCards > maxCardsWithoutOverlap;
@@ -97,24 +96,7 @@ const CardInHand: React.FC<CardInHandProps> = ({
 
   const styles = getFactionStyles();
 
-  // Handle drag events
-  const handleDragStart = useCallback((e: React.DragEvent) => {
-    setIsDragging(true);
-    onDragStart(card, index);
-
-    // Create drag image
-    const dragImage = e.currentTarget.cloneNode(true) as HTMLElement;
-    dragImage.style.transform = 'rotate(5deg)';
-    document.body.appendChild(dragImage);
-    e.dataTransfer.setDragImage(dragImage, 60, 80);
-    setTimeout(() => document.body.removeChild(dragImage), 0);
-  }, [card, index, onDragStart]);
-
-  const handleDragEnd = useCallback((e: React.DragEvent) => {
-    setIsDragging(false);
-    const didDrop = e.dataTransfer.dropEffect !== 'none';
-    onDragEnd(card, index, didDrop);
-  }, [card, index, onDragEnd]);
+  // Drag handlers removed - using React DnD instead of HTML5 drag events
 
   return (
     <motion.div
@@ -129,7 +111,7 @@ const CardInHand: React.FC<CardInHandProps> = ({
         x: 0, // Remove sideways movement
         opacity: 1,
         scale: isHovered ? 1.3 : 1,
-        rotateY: isDragging ? 10 : 0
+        rotateY: 0
       }}
       transition={{
         type: "spring",
@@ -140,16 +122,12 @@ const CardInHand: React.FC<CardInHandProps> = ({
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
       onClick={() => onSelect(card, index)}
-      draggable={canAfford}
-      onDragStart={handleDragStart}
-      onDragEnd={handleDragEnd}
     >
       <div
         className={clsx(
           "relative w-32 h-44 rounded-lg border-2 backdrop-blur-sm transition-all duration-200",
           styles.border,
           canAfford ? `hover:shadow-lg ${styles.glow}` : "opacity-60 cursor-not-allowed",
-          isDragging && "opacity-50",
           "gothic-card-frame overflow-hidden"
         )}
         style={{
@@ -305,7 +283,7 @@ const CardInHand: React.FC<CardInHandProps> = ({
               {card.abilities && card.abilities.length > 0 && (
                 <div className="mt-1">
                   <p className={clsx("text-xs leading-tight opacity-80", styles.text)}>
-                    {card.abilities[0].substring(0, 50)}...
+                    {card.abilities[0]?.substring(0, 50)}...
                   </p>
                 </div>
               )}

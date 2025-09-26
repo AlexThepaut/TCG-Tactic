@@ -61,6 +61,8 @@ export class TouchInteractionManager {
     }
 
     const touch = event.touches[0];
+    if (!touch) return;
+
     this.startTime = Date.now();
     this.startPoint = { x: touch.clientX, y: touch.clientY };
     this.currentPoint = { x: touch.clientX, y: touch.clientY };
@@ -82,6 +84,8 @@ export class TouchInteractionManager {
     }
 
     const touch = event.touches[0];
+    if (!touch) return;
+
     this.currentPoint = { x: touch.clientX, y: touch.clientY };
 
     const distance = this.getDistance(this.startPoint, this.currentPoint);
@@ -102,6 +106,8 @@ export class TouchInteractionManager {
     if (event.touches.length === 2) {
       const touch1 = event.touches[0];
       const touch2 = event.touches[1];
+      if (!touch1 || !touch2) return;
+
       const distance = this.getDistance(
         { x: touch1.clientX, y: touch1.clientY },
         { x: touch2.clientX, y: touch2.clientY }

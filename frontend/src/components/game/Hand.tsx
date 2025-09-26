@@ -2,18 +2,17 @@
  * Hand Component - Interactive card display with drag sources
  * Shows player's hand with resource management and selection
  */
-import React, { memo, useCallback, useState, useMemo } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import {
   ChevronLeftIcon,
   ChevronRightIcon,
   EyeIcon,
-  EyeSlashIcon,
-  InformationCircleIcon
+  EyeSlashIcon
 } from '@heroicons/react/24/outline';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
-import { mobileOptimizations, cardTouchHelpers } from '@/utils/touchInteractions';
+import { mobileOptimizations } from '@/utils/touchInteractions';
 import Card from './Card';
 import type { GameCard, Faction } from '@/types';
 
@@ -53,20 +52,6 @@ const Hand: React.FC<HandProps> = ({
   const playableCards = cards.filter(card => card.cost <= resources);
   const totalCost = cards.reduce((sum, card) => sum + card.cost, 0);
 
-  // Calculate card layout based on screen size
-  const cardLayout = useMemo(() => {
-    const { cardSize, isMobile, isTablet } = layout;
-    const maxVisibleCards = isMobile ? 3 : isTablet ? 4 : 5;
-    const cardGap = isMobile ? 4 : 8;
-
-    return {
-      cardWidth: cardSize.width,
-      cardHeight: cardSize.height,
-      maxVisible: maxVisibleCards,
-      gap: cardGap,
-      showScrollButtons: cards.length > maxVisibleCards,
-    };
-  }, [layout, cards.length]);
   const averageCost = cards.length > 0 ? Math.round(totalCost / cards.length * 10) / 10 : 0;
 
   // Handle card interactions

@@ -90,6 +90,31 @@
                 0 0 8px theme('colors.void.500');
   }
 
+  /* Enhanced card glow effects for better visibility */
+  .card-glow-humans {
+    box-shadow: 0 0 4px theme('colors.humans.400'),
+                0 0 6px theme('colors.humans.500'),
+                0 0 8px theme('colors.humans.600'),
+                inset 0 0 4px theme('colors.humans.300');
+    border: 2px solid theme('colors.humans.400');
+  }
+
+  .card-glow-aliens {
+    box-shadow: 0 0 4px theme('colors.aliens.400'),
+                0 0 6px theme('colors.aliens.500'),
+                0 0 8px theme('colors.aliens.600'),
+                inset 0 0 4px theme('colors.aliens.300');
+    border: 2px solid theme('colors.aliens.400');
+  }
+
+  .card-glow-robots {
+    box-shadow: 0 0 4px theme('colors.robots.400'),
+                0 0 6px theme('colors.robots.500'),
+                0 0 8px theme('colors.robots.600'),
+                inset 0 0 4px theme('colors.robots.300');
+    border: 2px solid theme('colors.robots.400');
+  }
+
   /* Holographic border effect */
   .holo-border {
     border-image: linear-gradient(45deg,

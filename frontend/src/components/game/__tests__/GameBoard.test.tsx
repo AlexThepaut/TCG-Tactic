@@ -100,7 +100,8 @@ const mockCard: GameCard = {
   maxHealth: 3,
   faction: 'humans' as Faction,
   type: 'unit',
-  abilities: ['Test Ability']
+  abilities: ['Test Ability'],
+  rarity: 'common'
 };
 
 const mockGameState: GameState = {

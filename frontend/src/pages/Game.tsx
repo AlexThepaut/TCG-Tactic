@@ -21,6 +21,7 @@ const createMockGameState = (gameId: string): GameState => {
       faction: 'humans' as Faction,
       type: 'unit',
       abilities: ['War Formation'],
+      rarity: 'common',
     },
     {
       id: 'card-2',
@@ -32,6 +33,7 @@ const createMockGameState = (gameId: string): GameState => {
       faction: 'aliens' as Faction,
       type: 'unit',
       abilities: ['War Evolution'],
+      rarity: 'common',
     },
     {
       id: 'card-3',
@@ -43,6 +45,7 @@ const createMockGameState = (gameId: string): GameState => {
       faction: 'robots' as Faction,
       type: 'unit',
       abilities: ['War Protocol'],
+      rarity: 'rare',
     },
     {
       id: 'card-4',
@@ -54,6 +57,7 @@ const createMockGameState = (gameId: string): GameState => {
       faction: 'humans' as Faction,
       type: 'spell',
       abilities: ['Deal 3 damage'],
+      rarity: 'common',
     }
   ];
 

@@ -4,7 +4,6 @@ import {
   ClockIcon,
   CogIcon,
   FlagIcon,
-  HandRaisedIcon,
 } from '@heroicons/react/24/outline';
 import { getFactionClasses, formatFactionName } from '@/utils/factionThemes';
 import type { PlayerData } from '@/types';

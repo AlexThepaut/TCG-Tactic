@@ -72,8 +72,8 @@ const MiddleActionZone: React.FC<MiddleActionZoneProps> = ({
           'flex flex-col items-center justify-center p-3 rounded-lg border-2 min-w-[60px] min-h-[60px]',
           getButtonStyles()
         )}
-        whileHover={enabled ? { y: -2 } : undefined}
-        whileTap={enabled ? { scale: 0.95 } : undefined}
+        {...(enabled && { whileHover: { y: -2 } })}
+        {...(enabled && { whileTap: { scale: 0.95 } })}
         disabled={!enabled}
       >
         <div className="w-6 h-6 mb-1">

@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { PlusIcon, TrashIcon } from '@heroicons/react/24/outline';
-import type { Faction } from '@/types';
+import { TrashIcon } from '@heroicons/react/24/outline';
+import UnifiedCard from '@/components/shared/UnifiedCard';
+import type { Faction, GameCard } from '@/types';
 
 const DeckBuilder = () => {
   const [selectedFaction, setSelectedFaction] = useState<Faction>('humans');
@@ -215,8 +216,8 @@ const DeckBuilder = () => {
                 </div>
               </div>
 
-              {/* Mock Card Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              {/* Card Grid using UnifiedCard */}
+              <div className="flex flex-wrap justify-center gap-4">
                 {Array.from({ length: 16 }).map((_, i) => {
                   const config = factionConfigs[selectedFaction];
                   const factionNames = {
@@ -225,38 +226,30 @@ const DeckBuilder = () => {
                     robots: 'MACHINE'
                   };
 
+                  // Create mock card data
+                  const mockCard: GameCard = {
+                    id: `deck-builder-mock-${selectedFaction}-${i}`,
+                    name: `${factionNames[selectedFaction]} ${i + 1}`,
+                    cost: (i % 10) + 1,
+                    attack: (i % 5) + 1,
+                    health: (i % 5) + 2,
+                    maxHealth: (i % 5) + 2,
+                    faction: selectedFaction,
+                    type: i % 2 === 0 ? 'unit' : 'spell',
+                    abilities: i % 4 === 0 ? [`${factionNames[selectedFaction]} warfare protocol`, 'Tactical superiority'] : [],
+                    range: i % 2 === 0 ? (i % 3) + 1 : undefined, // Units have range 1-3, spells don't
+                    rarity: (['common', 'rare', 'epic', 'legendary'] as const)[i % 4]
+                  };
+
                   return (
-                    <div
+                    <UnifiedCard
                       key={i}
-                      className={`bg-gothic-darkest/60 border-2 border-${config.colors}-600/50 hover:border-${config.colors}-400 p-3 relative group transition-all duration-500 hover:scale-105 overflow-hidden cursor-pointer`}
-                    >
-                      <div className={`absolute inset-0 bg-gradient-to-br from-${config.colors}-900/20 to-${config.colors}-700/10 opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-
-                      <div className="relative z-10">
-                        <div className="aspect-card bg-gothic-darker rounded-md mb-3 flex items-center justify-center text-void-500 text-xs font-tech border border-gothic-medium/30">
-                          <span className="gothic-text-shadow">CLASSIFIED</span>
-                        </div>
-
-                        <h3 className={`font-gothic font-bold text-${config.colors}-300 mb-1 text-sm gothic-text-shadow tracking-wider`}>
-                          {factionNames[selectedFaction as keyof typeof factionNames]} {i + 1}
-                        </h3>
-
-                        <div className={`flex justify-between text-xs text-${config.colors}-400 font-tech tracking-wide mb-3`}>
-                          <span>VOID: {(i % 10) + 1}</span>
-                          <span>WAR: {(i % 5) + 1}/{(i % 5) + 2}</span>
-                        </div>
-
-                        {/* Add to deck button */}
-                        <button className={`w-full py-2 text-xs font-tech font-bold tracking-wide bg-${config.colors}-600 hover:bg-${config.colors}-500 text-white transition-all flex items-center justify-center gap-2 border border-${config.colors}-500/50 hover:border-${config.colors}-400 hover:box-glow-${config.colors.slice(0, -1)} group/btn`}>
-                          <PlusIcon className={`w-3 h-3 group-hover/btn:icon-glow-${config.colors}`} />
-                          <span className="gothic-text-shadow">DEPLOY</span>
-                        </button>
-                      </div>
-
-                      {/* Border glow effects */}
-                      <div className={`absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${config.colors}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                      <div className={`absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-${config.colors}-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity`}></div>
-                    </div>
+                      card={mockCard}
+                      context="deck-builder"
+                      cardSize="lg"
+                      onClick={() => console.log(`Clicked card for future drag-to-deck: ${mockCard.name}`)}
+                      className="group"
+                    />
                   );
                 })}
               </div>
