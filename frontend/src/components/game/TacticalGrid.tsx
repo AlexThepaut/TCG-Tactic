@@ -2,7 +2,7 @@ import React, { useMemo } from 'react';
 import { useDrop } from 'react-dnd';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
-import { useGridLayout } from '@/hooks/useResponsiveLayout';
+import { useGridLayout, useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { getFactionClasses } from '@/utils/factionThemes';
 import type { GameCard, GamePosition } from '@/types';
 
@@ -61,7 +61,8 @@ const GridCell: React.FC<GridCellProps> = ({
 
   const getFactionColor = (faction: string) => {
     const classes = getFactionClasses(faction as any, 'accent');
-    return `${classes.border} ${classes.background}/10`;
+    const classObj = classes as unknown as { border: string; background: string };
+    return `${classObj.border} ${classObj.background}/10`;
   };
 
   const cellClassName = clsx(
@@ -172,6 +173,7 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
 }) => {
   const gridLayout = useGridLayout(faction);
   const { formationCells } = gridLayout;
+  const { gridContainer } = useResponsiveLayout();
 
   // Memoize highlighted positions for performance
   const highlightedPositions = useMemo(() => {
@@ -198,13 +200,14 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
     for (let row = 0; row < 3; row++) {
       for (let col = 0; col < 5; col++) {
         if (board[row]?.[col] !== undefined) {
+          const cell = board[row]![col];
           if (player === 'current') {
             // For current player, flip horizontally so it faces the opponent
             // Map to transformed[col][2-row] to flip the rows
-            transformed[col][2 - row] = board[row]![col];
+            transformed[col]![2 - row] = cell;
           } else {
             // For opponent, keep normal transformation
-            transformed[col][row] = board[row]![col];
+            transformed[col]![row] = cell;
           }
         }
       }
@@ -226,10 +229,10 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
         if (formationCells[row]?.[col] !== undefined) {
           if (player === 'current') {
             // For current player, flip horizontally to face opponent
-            transformed[col][2 - row] = formationCells[row]![col];
+            transformed[col]![2 - row] = formationCells[row]![col]!;
           } else {
             // For opponent, keep normal transformation
-            transformed[col][row] = formationCells[row]![col];
+            transformed[col]![row] = formationCells[row]![col]!;
           }
         }
       }
@@ -238,18 +241,23 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
     return transformed;
   }, [formationCells, faceToFace, player]);
 
+  // Get responsive container dimensions
+  const containerConfig = faceToFace ? gridContainer.faceToFace : gridContainer.normal;
+  const gridCols = faceToFace ? 3 : 5;
+  const gridRows = faceToFace ? 5 : 3;
+
   return (
     <div className={clsx('flex flex-col', className)}>
       {/* Grid Container with Face-to-Face Rotation - Responsive */}
       <div className={clsx('relative flex justify-center w-full')}>
         <div
-          className={clsx('grid gap-2 border-2 p-3 w-full aspect-[3/5] relative scanlines bg-gothic-darkest/60 backdrop-blur-sm', {
-            'grid-cols-5 border-imperial-700/50': !faceToFace,
-            'grid-cols-3 border-imperial-700/50': faceToFace
-          })}
+          className={clsx('grid gap-1 md:gap-2 border-2 p-1 md:p-2 relative scanlines bg-gothic-darkest/60 backdrop-blur-sm border-imperial-700/50')}
           style={{
-            maxWidth: faceToFace ? '25dvw' : '800px',
-            aspectRatio: faceToFace ? '3/5' : '5/3'
+            width: `${containerConfig.width}px`,
+            height: `${containerConfig.height}px`,
+            maxHeight: faceToFace ? '480px' : '420px', // Increased responsive max-height constraints for bigger grids
+            gridTemplateColumns: `repeat(${gridCols}, 1fr)`,
+            gridTemplateRows: `repeat(${gridRows}, 1fr)`,
           }}
         >
           {/* Atmospheric grid effects */}
@@ -278,7 +286,7 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
               const displayPositionKey = `${colIndex},${rowIndex}`; // For highlighting (display coords)
               const originalPositionKey = `${originalPosition.x},${originalPosition.y}`; // For game logic
 
-              const isPlayable = transformedFormation[rowIndex]?.[colIndex] || false;
+              const isPlayable = transformedFormation[rowIndex]?.[colIndex] ?? false;
               const isHighlighted = highlightedPositions.has(originalPositionKey);
               const isAttackable = attackablePositions.has(originalPositionKey);
 
@@ -294,8 +302,8 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
                   cellWidth={0} // Will use CSS instead
                   cellHeight={0} // Will use CSS instead
                   faction={faction}
-                  onClick={onCellClick}
-                  onDrop={onCardDrop}
+                  onClick={onCellClick ?? undefined}
+                  onDrop={onCardDrop ?? undefined}
                 />
               );
             })

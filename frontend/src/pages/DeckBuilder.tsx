@@ -245,7 +245,6 @@ const DeckBuilder = () => {
                     <UnifiedCard
                       key={i}
                       card={mockCard}
-                      context="deck-builder"
                       cardSize="lg"
                       onClick={() => console.log(`Clicked card for future drag-to-deck: ${mockCard.name}`)}
                       className="group"

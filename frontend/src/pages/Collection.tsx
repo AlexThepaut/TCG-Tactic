@@ -149,7 +149,6 @@ const Collection = () => {
               <UnifiedCard
                 key={i}
                 card={mockCard}
-                context="collection"
                 cardSize="xl"
                 onClick={() => console.log(`Clicked card: ${mockCard.name}`)}
                 className="group"

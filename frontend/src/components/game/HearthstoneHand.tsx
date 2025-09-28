@@ -1,22 +1,47 @@
 /**
- * Hearthstone-Style Hand Component
- * Bottom-positioned hand with hover expansion and drag functionality
- * Warhammer 40K themed with grimdark aesthetic
+ * Enhanced Hearthstone-Style Hand Component
+ * Arc-positioned hand with multi-level hover states and responsive design
+ * Features peek/raised/focused modes with natural card arrangement
  */
-import React, { memo, useState, useCallback } from 'react';
+import React, { memo, useState, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { clsx } from 'clsx';
+import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
+import UnifiedCard from '@/components/shared/UnifiedCard';
 import type { GameCard, Faction } from '@/types';
+
+// Enhanced hand state management
+interface HandState {
+  mode: 'peek' | 'raised' | 'focused';
+  hoveredCardIndex: number | null;
+  isHandHovered: boolean;
+  focusedIndex: number | null; // For keyboard navigation
+}
+
+// Arc positioning configuration
+interface ArcConfig {
+  radius: number;
+  spreadAngle: number; // Total angle spread in degrees
+  baseOffset: number;
+  cardTilt: number; // Individual card rotation multiplier
+}
+
+// Individual card position and transform data
+interface CardPosition {
+  x: number;
+  y: number;
+  rotation: number;
+  zIndex: number;
+}
 
 interface CardInHandProps {
   card: GameCard;
   index: number;
+  position: CardPosition;
+  handState: HandState;
+  cardSize: { width: number; height: number };
+  handWidth: number;
   faction: Faction;
   resources: number;
-  isHovered: boolean;
-  isOtherHovered: boolean;
-  totalCards: number;
-  maxCardsWithoutOverlap: number;
   onHover: (index: number | null) => void;
   onSelect: (card: GameCard, index: number) => void;
   onDragStart: (card: GameCard, index: number) => void;
@@ -26,280 +51,118 @@ interface CardInHandProps {
 const CardInHand: React.FC<CardInHandProps> = ({
   card,
   index,
+  position,
+  handState,
+  cardSize,
+  handWidth,
   faction,
   resources,
-  isHovered,
-  isOtherHovered,
-  totalCards,
-  maxCardsWithoutOverlap,
   onHover,
   onSelect,
   onDragStart,
   onDragEnd
 }) => {
-  const canAfford = card.cost <= resources;
+  // Determine if this card is currently focused/hovered
+  const isCardHovered = handState.hoveredCardIndex === index;
+  const isCardFocused = handState.focusedIndex === index;
 
-  // Calculate card positioning
-  const needsOverlap = totalCards > maxCardsWithoutOverlap;
-  const cardWidth = 128; // w-32 = 128px
-  const overlapAmount = needsOverlap ? Math.min(96, cardWidth - (totalCards - maxCardsWithoutOverlap) * 8) : cardWidth;
-
-  // Position calculation for horizontal layout
-  const basePosition = needsOverlap ? index * overlapAmount : index * (cardWidth + 8);
-
-  // Hover adjustments - when a card is hovered, others move aside
-  let adjustedPosition = basePosition;
-  if (isOtherHovered && !isHovered) {
-    // Calculate offset based on position relative to hovered card
-    const hoveredIndex = Array.from({ length: totalCards }).findIndex((_, i) => i !== index);
-    // This is simplified - in real implementation you'd track the actual hovered index
-    adjustedPosition += index > hoveredIndex ? 40 : -40;
-  }
-
-  // Faction-specific styling
-  const getFactionStyles = () => {
-    switch (faction) {
-      case 'humans':
-        return {
-          border: 'border-humans-600',
-          bg: 'bg-gradient-to-br from-humans-800 to-humans-900',
-          text: 'text-humans-100',
-          accent: 'text-humans-400',
-          glow: 'shadow-humans-500/10'
-        };
-      case 'aliens':
-        return {
-          border: 'border-aliens-600',
-          bg: 'bg-gradient-to-br from-aliens-800 to-aliens-900',
-          text: 'text-aliens-100',
-          accent: 'text-aliens-400',
-          glow: 'shadow-aliens-500/10'
-        };
-      case 'robots':
-        return {
-          border: 'border-robots-600',
-          bg: 'bg-gradient-to-br from-robots-800 to-robots-900',
-          text: 'text-robots-100',
-          accent: 'text-robots-400',
-          glow: 'shadow-robots-500/10'
-        };
-      default:
-        return {
-          border: 'border-gothic-steel',
-          bg: 'bg-gradient-to-br from-gothic-darker to-gothic-darkest',
-          text: 'text-imperial-100',
-          accent: 'text-imperial-400',
-          glow: 'shadow-imperial-500/10'
-        };
+  // Calculate Y offset based on hand state and card state
+  const getYOffset = useCallback(() => {
+    if (isCardHovered && handState.mode === 'focused') {
+      return -30; // Fully visible when individually hovered (reduced for lower hand zone)
     }
-  };
+    if (handState.mode === 'raised') {
+      return cardSize.height * 0.4; // Show 60% of card when hand is raised (reduced)
+    }
+    return cardSize.height * 0.85; // Show only 15% of card in peek mode (much lower hand zone)
+  }, [handState.mode, isCardHovered, cardSize.height]);
 
-  const styles = getFactionStyles();
+  // Get scale based on hover state (including width expansion)
+  const getScale = useCallback(() => {
+    if (isCardHovered && handState.mode === 'focused') {
+      return { scaleX: 1.4, scaleY: 1.2 }; // Much wider and taller when focused for easier selection
+    }
+    if (handState.mode === 'raised') {
+      return { scaleX: 1.1, scaleY: 1.05 }; // Slight expansion when hand is raised
+    }
+    return { scaleX: 1, scaleY: 1 };
+  }, [isCardHovered, handState.mode]);
 
-  // Drag handlers removed - using React DnD instead of HTML5 drag events
+  // Check if reduced motion is preferred (memoized to avoid repeated matchMedia calls)
+  const animationConfig = useMemo(() => {
+    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    // Enhanced spring configuration for card spreading effect
+    return {
+      type: "spring" as const,
+      stiffness: prefersReducedMotion ? 500 : 400,  // Snappier for spread effect
+      damping: prefersReducedMotion ? 50 : 35,      // Smoother settling
+      mass: prefersReducedMotion ? 1.0 : 0.6,      // Lighter, more responsive
+      velocity: 0                                   // Clean start from rest
+    };
+  }, []);
 
   return (
     <motion.div
-      className="absolute bottom-0 cursor-pointer select-none"
+      className="absolute cursor-pointer select-none"
       style={{
-        left: `${adjustedPosition}px`,
-        zIndex: isHovered ? 50 : 10 + index,
+        left: `${handWidth / 2 + position.x - cardSize.width / 2}px`,
+        zIndex: position.zIndex,
+        transformOrigin: 'bottom center'
       }}
-      initial={{ y: 200, opacity: 0 }}
+      initial={{ y: 200, opacity: 0, rotate: 0 }}
       animate={{
-        y: isHovered ? -30 : 90, // Show half card normally (pushed down), full card on hover (pulled up)
-        x: 0, // Remove sideways movement
+        y: position.y + getYOffset(),
         opacity: 1,
-        scale: isHovered ? 1.3 : 1,
-        rotateY: 0
+        rotate: position.rotation,
+        scaleX: getScale().scaleX,
+        scaleY: getScale().scaleY,
       }}
-      transition={{
-        type: "spring",
-        stiffness: 300,
-        damping: 30,
-        opacity: { duration: 0.2 }
-      }}
+      transition={animationConfig}
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
-      onClick={() => onSelect(card, index)}
+      whileHover={{
+        y: position.y - 30,
+        scaleX: 1.4,
+        scaleY: 1.2,
+        transition: animationConfig
+      }}
     >
-      <div
-        className={clsx(
-          "relative w-32 h-44 rounded-lg border-2 backdrop-blur-sm transition-all duration-200",
-          styles.border,
-          canAfford ? `hover:shadow-lg ${styles.glow}` : "opacity-60 cursor-not-allowed",
-          "gothic-card-frame overflow-hidden"
-        )}
-        style={{
-          background: `linear-gradient(135deg, rgba(26, 26, 26, 0.95) 0%, rgba(42, 42, 42, 0.90) 50%, rgba(20, 20, 20, 0.95) 100%)`
-        }}
-      >
-        {/* Collapsed State - Name & Cost */}
-        <AnimatePresence>
-          {!isHovered && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 flex flex-col justify-between p-3"
-            >
-              {/* Cost */}
-              <div className="flex justify-end">
-                <div className={clsx(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2",
-                  canAfford ?
-                    "bg-imperial-400 text-gothic-black border-imperial-300" :
-                    "bg-blood-600 text-white border-blood-500"
-                )}>
-                  {card.cost}
-                </div>
-              </div>
-
-              {/* Name */}
-              <div className="text-center">
-                <h3 className={clsx(
-                  "text-sm font-gothic font-semibold leading-tight",
-                  styles.text,
-                  "gothic-text-shadow"
-                )}>
-                  {card.name}
-                </h3>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Expanded State - Full Details */}
-        <AnimatePresence>
-          {isHovered && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.2 }}
-              className="absolute inset-0 p-3 flex flex-col"
-            >
-              {/* Header */}
-              <div className="flex justify-between items-start mb-2">
-                <div className={clsx(
-                  "w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold border-2",
-                  canAfford ?
-                    "bg-imperial-400 text-gothic-black border-imperial-300" :
-                    "bg-blood-600 text-white border-blood-500"
-                )}>
-                  {card.cost}
-                </div>
-
-                <div className={clsx(
-                  "px-2 py-1 rounded text-xs font-medium uppercase tracking-wide border",
-                  "bg-gothic-darkest/80 border-imperial-600 text-imperial-300"
-                )}>
-                  {card.type}
-                </div>
-              </div>
-
-              {/* Name */}
-              <h3 className={clsx(
-                "text-sm font-gothic font-bold mb-2 leading-tight",
-                styles.text,
-                "gothic-text-shadow"
-              )}>
-                {card.name}
-              </h3>
-
-              {/* Art Area */}
-              <div className="flex-1 mb-2">
-                <div
-                  className="w-full h-16 rounded border border-gothic-steel relative overflow-hidden"
-                  style={{
-                    background: faction === 'humans'
-                      ? `linear-gradient(135deg,
-                          rgba(72, 101, 129, 0.8) 0%,
-                          rgba(36, 59, 83, 0.9) 50%,
-                          rgba(16, 42, 67, 0.8) 100%
-                        ),
-                        radial-gradient(circle at 70% 30%, rgba(130, 154, 177, 0.3) 0%, transparent 60%)`
-                      : faction === 'aliens'
-                      ? `linear-gradient(135deg,
-                          rgba(90, 70, 229, 0.8) 0%,
-                          rgba(61, 39, 179, 0.9) 50%,
-                          rgba(46, 26, 153, 0.8) 100%
-                        ),
-                        radial-gradient(circle at 70% 30%, rgba(139, 125, 255, 0.3) 0%, transparent 60%)`
-                      : `linear-gradient(135deg,
-                          rgba(230, 74, 25, 0.8) 0%,
-                          rgba(216, 67, 21, 0.9) 50%,
-                          rgba(165, 42, 0, 0.8) 100%
-                        ),
-                        radial-gradient(circle at 70% 30%, rgba(255, 121, 97, 0.3) 0%, transparent 60%)`
-                  }}
-                >
-                  {/* Background pattern overlay */}
-                  <div
-                    className="absolute inset-0 opacity-20"
-                    style={{
-                      backgroundImage: `repeating-linear-gradient(
-                        45deg,
-                        transparent,
-                        transparent 4px,
-                        rgba(255, 255, 255, 0.1) 4px,
-                        rgba(255, 255, 255, 0.1) 8px
-                      )`
-                    }}
-                  ></div>
-
-                  {card.imageUrl ? (
-                    <img
-                      src={card.imageUrl}
-                      alt={card.name}
-                      className="w-full h-full object-cover rounded relative z-10"
-                    />
-                  ) : (
-                    <div className="w-full h-full flex items-center justify-center relative z-10">
-                      <div className={clsx("text-2xl drop-shadow-lg", styles.accent)}>
-                        {card.type === 'spell' ? '🔮' : '⚔'}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {/* Stats */}
-              {card.type === 'unit' && (
-                <div className="flex justify-between items-center text-xs">
-                  <div className="flex items-center">
-                    <span className={clsx("font-bold mr-1", styles.accent)}>⚡</span>
-                    <span className={clsx("font-semibold", styles.text)}>{card.attack}</span>
-                  </div>
-                  <div className="flex items-center">
-                    <span className={clsx("font-bold mr-1", styles.accent)}>❤</span>
-                    <span className={clsx("font-semibold", styles.text)}>{card.health}</span>
-                  </div>
-                </div>
-              )}
-
-              {/* Abilities or description */}
-              {card.abilities && card.abilities.length > 0 && (
-                <div className="mt-1">
-                  <p className={clsx("text-xs leading-tight opacity-80", styles.text)}>
-                    {card.abilities[0]?.substring(0, 50)}...
-                  </p>
-                </div>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Gothic decorative corners */}
-        <div className="absolute top-1 left-1 w-2 h-2 border-l-2 border-t-2 border-imperial-600 opacity-60"></div>
-        <div className="absolute top-1 right-1 w-2 h-2 border-r-2 border-t-2 border-imperial-600 opacity-60"></div>
-        <div className="absolute bottom-1 left-1 w-2 h-2 border-l-2 border-b-2 border-imperial-600 opacity-60"></div>
-        <div className="absolute bottom-1 right-1 w-2 h-2 border-r-2 border-b-2 border-imperial-600 opacity-60"></div>
-      </div>
+      <UnifiedCard
+        card={card}
+        cardSize={cardSize.width >= 224 ? "xl" : cardSize.width >= 192 ? "lg" : "md"}
+        handIndex={index}
+        faction={faction}
+        resources={resources}
+        isPlayable={true}
+        isSelected={isCardFocused}
+        showDetails={isCardHovered || isCardFocused}
+        onClick={(card) => onSelect(card, index)}
+        onDragStart={(card, handIndex) => onDragStart(card, handIndex ?? index)}
+        onDragEnd={(card, handIndex, didDrop) => onDragEnd(card, handIndex ?? index, didDrop ?? false)}
+        disableAnimations={true}
+      />
     </motion.div>
   );
 };
+
+// Memoize the CardInHand component for performance
+const MemoizedCardInHand = memo(CardInHand, (prevProps, nextProps) => {
+  // Only re-render if essential props change (including spread effect changes)
+  return (
+    prevProps.card.id === nextProps.card.id &&
+    prevProps.handState.mode === nextProps.handState.mode &&
+    prevProps.handState.hoveredCardIndex === nextProps.handState.hoveredCardIndex &&
+    prevProps.handState.focusedIndex === nextProps.handState.focusedIndex &&
+    prevProps.position.x === nextProps.position.x &&
+    prevProps.position.y === nextProps.position.y &&
+    prevProps.position.rotation === nextProps.position.rotation &&
+    prevProps.position.zIndex === nextProps.position.zIndex &&
+    prevProps.cardSize.width === nextProps.cardSize.width &&
+    prevProps.cardSize.height === nextProps.cardSize.height &&
+    prevProps.handWidth === nextProps.handWidth
+  );
+});
 
 export interface HearthstoneHandProps {
   cards: GameCard[];
@@ -318,15 +181,125 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
   onCardDragStart,
   onCardDragEnd
 }) => {
-  const [hoveredCard, setHoveredCard] = useState<number | null>(null);
+  const layout = useResponsiveLayout();
+  const handRef = useRef<HTMLDivElement>(null);
 
-  const maxCardsWithoutOverlap = 7;
-  const handWidth = Math.max(cards.length * 136, 800); // 128px card + 8px gap
+  // Enhanced hand state
+  const [handState, setHandState] = useState<HandState>({
+    mode: 'peek',
+    hoveredCardIndex: null,
+    isHandHovered: false,
+    focusedIndex: null
+  });
 
-  const handleCardHover = useCallback((index: number | null) => {
-    setHoveredCard(index);
+  // Calculate responsive card size
+  const cardSize = useMemo(() => {
+    const { cardSize: layoutCardSize } = layout;
+    const availableWidth = layout.availableGameSpace.width * 0.85; // Use 85% of available space
+
+    // Calculate maximum card width that allows all cards to fit with overlap
+    const minOverlap = layout.isMobile ? 0.4 : 0.6; // Cards overlap by 40-60%
+    const maxCardWidth = availableWidth / (cards.length * minOverlap + (1 - minOverlap));
+
+    // Use responsive card size but cap it if too many cards
+    const targetWidth = Math.min(layoutCardSize.width, maxCardWidth);
+    const aspectRatio = 5 / 7; // Classic TCG ratio
+
+    return {
+      width: targetWidth,
+      height: targetWidth / aspectRatio
+    };
+  }, [layout, cards.length]);
+
+  // Calculate arc configuration based on screen size and card count
+  const arcConfig = useMemo((): ArcConfig => {
+    const baseRadius = layout.availableGameSpace.width * (layout.isMobile ? 0.8 : 0.5);
+    const maxSpread = layout.isMobile ? 40 : 60; // Increased maximum spread angle
+    const minSpread = 15; // Minimum spread even for few cards
+    const actualSpread = Math.max(minSpread, Math.min(maxSpread, cards.length * 8)); // 8 degrees per card
+
+    return {
+      radius: baseRadius,
+      spreadAngle: actualSpread,
+      baseOffset: layout.isMobile ? 20 : 30,
+      cardTilt: 0.8 // More pronounced rotation
+    };
+  }, [layout, cards.length]);
+
+  // Calculate arc positions for all cards with spread effect
+  const cardPositions = useMemo((): CardPosition[] => {
+    if (cards.length === 0) return [];
+
+    return cards.map((_, index) => {
+      const angleStep = arcConfig.spreadAngle / Math.max(1, cards.length - 1);
+      const cardAngle = (index - (cards.length - 1) / 2) * angleStep;
+      const angleRad = (cardAngle * Math.PI) / 180;
+
+      // Base arc position
+      let x = arcConfig.radius * Math.sin(angleRad);
+      const y = arcConfig.baseOffset + arcConfig.radius * (1 - Math.cos(angleRad));
+      const rotation = cardAngle * arcConfig.cardTilt;
+
+      // Apply card spreading effect
+      if (handState.hoveredCardIndex !== null && handState.mode === 'focused') {
+        const hoveredIndex = handState.hoveredCardIndex;
+        const distance = Math.abs(index - hoveredIndex);
+
+        // Skip spreading for the hovered card itself
+        if (index !== hoveredIndex) {
+          // Calculate spread intensity based on distance from hovered card
+          const maxDistance = Math.max(hoveredIndex, cards.length - 1 - hoveredIndex);
+          const spreadIntensity = Math.max(0, 1 - (distance / (maxDistance + 1)));
+
+          // Base spread distance - responsive to card size and screen size (increased for more dramatic effect)
+          const baseSpreadDistance = layout.isMobile ? 75 : 95;
+
+          // Calculate spread offset with exponential falloff
+          const spreadOffset = spreadIntensity * baseSpreadDistance * Math.pow(0.6, distance);
+
+          // Determine direction (left or right of hovered card)
+          const direction = index < hoveredIndex ? -1 : 1;
+
+          // Apply spread to X position
+          x += spreadOffset * direction;
+        }
+      }
+
+      // Z-index: hovered card on top, then by reverse index for natural stacking
+      const zIndex = handState.hoveredCardIndex === index ? 100 : 50 + (cards.length - index);
+
+      return { x, y, rotation, zIndex };
+    });
+  }, [cards.length, arcConfig, handState.hoveredCardIndex, handState.mode, layout.isMobile]);
+
+  // Hand hover handlers
+  const handleHandMouseEnter = useCallback(() => {
+    setHandState(prev => ({
+      ...prev,
+      isHandHovered: true,
+      mode: prev.hoveredCardIndex !== null ? 'focused' : 'raised'
+    }));
   }, []);
 
+  const handleHandMouseLeave = useCallback(() => {
+    setHandState(prev => ({
+      ...prev,
+      isHandHovered: false,
+      hoveredCardIndex: null,
+      mode: 'peek'
+    }));
+  }, []);
+
+  // Card hover handlers
+  const handleCardHover = useCallback((index: number | null) => {
+    setHandState(prev => ({
+      ...prev,
+      hoveredCardIndex: index,
+      mode: index !== null ? 'focused' : (prev.isHandHovered ? 'raised' : 'peek')
+    }));
+  }, []);
+
+  // Event handlers
   const handleCardSelect = useCallback((card: GameCard, index: number) => {
     onCardSelect?.(card, index);
   }, [onCardSelect]);
@@ -339,32 +312,137 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
     onCardDragEnd?.(card, index, didDrop);
   }, [onCardDragEnd]);
 
+  // Keyboard navigation
+  const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
+    if (cards.length === 0) return;
+
+    switch (e.key) {
+      case 'ArrowLeft':
+        e.preventDefault();
+        setHandState(prev => ({
+          ...prev,
+          focusedIndex: Math.max(0, (prev.focusedIndex ?? 0) - 1),
+          mode: 'focused'
+        }));
+        break;
+      case 'ArrowRight':
+        e.preventDefault();
+        setHandState(prev => ({
+          ...prev,
+          focusedIndex: Math.min(cards.length - 1, (prev.focusedIndex ?? 0) + 1),
+          mode: 'focused'
+        }));
+        break;
+      case 'Enter':
+      case ' ':
+        e.preventDefault();
+        if (handState.focusedIndex !== null && cards[handState.focusedIndex]) {
+          onCardSelect?.(cards[handState.focusedIndex]!, handState.focusedIndex);
+        }
+        break;
+      case 'Escape':
+        setHandState(prev => ({
+          ...prev,
+          focusedIndex: null,
+          mode: 'peek'
+        }));
+        break;
+    }
+  }, [cards, handState.focusedIndex, onCardSelect]);
+
   if (cards.length === 0) {
     return null;
   }
 
+  // Calculate hand container dimensions (account for card widening, spreading, and lower positioning)
+  const leftmostX = cardPositions.length > 0 ? Math.min(...cardPositions.map(pos => pos.x)) : 0;
+  const rightmostX = cardPositions.length > 0 ? Math.max(...cardPositions.map(pos => pos.x)) : 0;
+  const totalCardSpread = rightmostX - leftmostX;
+
+  // Calculate additional space needed for spreading effect (updated to match new spread distances)
+  const maxSpreadDistance = layout.isMobile ? 75 : 95;
+  const spreadPadding = cards.length > 1 ? maxSpreadDistance * 1.5 : 0; // Extra buffer for spreading
+
+  const handWidth = Math.max(
+    cardSize.width * 3, // Minimum width
+    totalCardSpread + cardSize.width * 2.8 + spreadPadding // Card spread + scaling + spread padding
+  );
+  const handHeight = cardSize.height + 80; // Reduced height for more compact hand zone
+
+  // Debug logging (after all variables are calculated)
+  console.log('HearthstoneHand Debug:', {
+    cardsLength: cards.length,
+    handState,
+    cardSize,
+    arcConfig,
+    cardPositions,
+    handWidth,
+    handHeight,
+    leftmostX,
+    rightmostX,
+    totalCardSpread,
+    maxSpreadDistance,
+    spreadPadding,
+    isSpreadActive: handState.hoveredCardIndex !== null && handState.mode === 'focused'
+  });
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
-      <div className="relative mx-auto" style={{ width: `${handWidth}px`, height: '300px' }}>
-        <div className="absolute bottom-0 w-full h-80 pointer-events-auto">
-          {cards.map((card, index) => (
-            <CardInHand
-              key={`${card.id}-${index}`}
-              card={card}
-              index={index}
-              faction={faction}
-              resources={resources}
-              isHovered={hoveredCard === index}
-              isOtherHovered={hoveredCard !== null && hoveredCard !== index}
-              totalCards={cards.length}
-              maxCardsWithoutOverlap={maxCardsWithoutOverlap}
-              onHover={handleCardHover}
-              onSelect={handleCardSelect}
-              onDragStart={handleCardDragStart}
-              onDragEnd={handleCardDragEnd}
-            />
-          ))}
+      <div
+        ref={handRef}
+        className="relative mx-auto pointer-events-auto"
+        style={{
+          width: `${handWidth}px`,
+          height: `${handHeight}px`
+        }}
+        onMouseEnter={handleHandMouseEnter}
+        onMouseLeave={handleHandMouseLeave}
+        onKeyDown={handleKeyDown}
+        tabIndex={0}
+        role="group"
+        aria-label={`Hand with ${cards.length} cards`}
+      >
+        {/* Center the hand horizontally */}
+        <div
+          className="absolute bottom-0"
+          style={{
+            left: '50%',
+            transform: 'translateX(-50%)', // Simple center transform
+            width: `${handWidth}px`,
+            height: `${handHeight}px`
+          }}
+        >
+          <AnimatePresence>
+            {cards.map((card, index) => (
+              <MemoizedCardInHand
+                key={`${card.id}-${index}`}
+                card={card}
+                index={index}
+                position={cardPositions[index]!}
+                handState={handState}
+                cardSize={cardSize}
+                handWidth={handWidth}
+                faction={faction}
+                resources={resources}
+                onHover={handleCardHover}
+                onSelect={handleCardSelect}
+                onDragStart={handleCardDragStart}
+                onDragEnd={handleCardDragEnd}
+              />
+            ))}
+          </AnimatePresence>
         </div>
+      </div>
+
+      {/* Accessibility: Screen reader announcements */}
+      <div
+        aria-live="polite"
+        aria-atomic="true"
+        className="sr-only"
+      >
+        {handState.focusedIndex !== null &&
+          `Focused on card ${handState.focusedIndex + 1} of ${cards.length}: ${cards[handState.focusedIndex]?.name}`
+        }
       </div>
     </div>
   );

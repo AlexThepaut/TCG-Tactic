@@ -48,8 +48,8 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   disableAnimations = false,
   customAnimations
 }) => {
-  // Get context configuration
-  const contextConfig = CONTEXT_CONFIGS[context];
+  // Use collection configuration as default for all cards
+  const contextConfig = CONTEXT_CONFIGS['collection'];
   const effectiveSize = cardSize || size || contextConfig.defaultSize;
   const cardFaction = faction || card.faction;
 
@@ -57,8 +57,8 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   const canAfford = isAffordable !== undefined ? isAffordable : card.cost <= resources;
   const canPlay = isPlayable && canAfford;
 
-  // Drag & drop integration (only for game context)
-  const dragEnabled = context === 'game' && contextConfig.interactions.dragDrop.enabled;
+  // Drag & drop integration (enabled when drag handlers are provided)
+  const dragEnabled = !!(onDragStart && onDragEnd);
 
   const { isDragging, canDrag, drag } = useSafeDragCard(
     dragEnabled ? card : null,
@@ -141,11 +141,10 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     e.preventDefault();
     e.stopPropagation();
 
-    if (contextConfig.interactions.click.enabled && onClick) {
-      if (context === 'game' && !canPlay) return; // Only prevent click in game context
+    if (onClick) {
       onClick(card);
     }
-  }, [onClick, card, context, canPlay, contextConfig.interactions.click.enabled]);
+  }, [onClick, card]);
 
   // Handle touch events
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
@@ -154,8 +153,6 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     }
   }, [onTouch, card]);
 
-  // Get layout configuration
-  const layoutConfig = contextConfig.layout;
 
   return (
     <motion.div
@@ -186,8 +183,8 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         isSelected && "ring-2 ring-offset-2 ring-blue-500",
 
         // Gothic theme effects
-        contextConfig.theme?.gothic?.scanlines && "scanlines",
-        contextConfig.theme?.gothic?.backdropBlur && "backdrop-blur-sm",
+        "scanlines",
+        "backdrop-blur-sm",
 
         // Custom className
         className
@@ -207,7 +204,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             "w-6 h-6 md:w-7 md:h-7 rounded-full flex items-center justify-center text-xs md:text-sm font-bold",
             canAfford ? factionStyles.accent : 'text-red-500',
             canAfford ? 'bg-white/80' : 'bg-red-100/80',
-            contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
+"gothic-text-shadow"
           )}>
             {card.cost}
           </div>
@@ -246,7 +243,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
           <h3 className={clsx(
             "text-xs md:text-sm font-semibold leading-tight text-center line-clamp-2",
             factionStyles.text,
-            contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
+"gothic-text-shadow"
           )}>
             {card.name}
           </h3>
@@ -271,7 +268,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             {/* Attack - Bottom Left */}
             <div className={clsx(
               "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
-              contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
+  "gothic-text-shadow"
             )}>
               <BoltIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", "text-orange-400")} />
               <span className="font-semibold text-white">
@@ -283,7 +280,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             {card.range !== undefined && (
               <div className={clsx(
                 "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
-                contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
+    "gothic-text-shadow"
               )}>
                 <span className="font-semibold text-blue-300 mr-1">R</span>
                 <span className="font-semibold text-white">
@@ -295,7 +292,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             {/* Health - Bottom Right */}
             <div className={clsx(
               "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
-              contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
+  "gothic-text-shadow"
             )}>
               <HeartIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", "text-red-400")} />
               <span className="font-semibold text-white">
@@ -339,31 +336,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         )}
       </AnimatePresence>
 
-      {/* Unaffordable Overlay */}
-      {context === 'game' && !canAfford && (
-        <div className="absolute inset-0 bg-red-900/40 rounded-lg backdrop-blur-sm flex items-center justify-center">
-          <div className="text-white text-xs font-semibold bg-red-600 px-2 py-1 rounded">
-            Need {card.cost - resources} more
-          </div>
-        </div>
-      )}
 
-      {/* Gothic atmospheric effects */}
-      {contextConfig.theme?.faction?.atmosphericEffects && (
-        <>
-          {/* Top border glow */}
-          <div className={clsx(
-            "absolute top-0 left-0 w-full h-px opacity-0 group-hover:opacity-100 transition-opacity",
-            `bg-gradient-to-r from-transparent via-${cardFaction}-500 to-transparent`
-          )} />
-
-          {/* Bottom border glow */}
-          <div className={clsx(
-            "absolute bottom-0 left-0 w-full h-px opacity-0 group-hover:opacity-100 transition-opacity",
-            `bg-gradient-to-r from-transparent via-${cardFaction}-500 to-transparent`
-          )} />
-        </>
-      )}
     </motion.div>
   );
 };

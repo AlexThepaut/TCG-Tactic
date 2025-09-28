@@ -27,7 +27,7 @@ export interface UnifiedCardProps {
   card: GameCard;
 
   // Context and sizing
-  context: CardContext;
+  context?: CardContext;
   size?: CardSize;
   cardSize?: CardSize; // Alias for size - easier to use
   className?: string;
@@ -173,12 +173,12 @@ export const CONTEXT_CONFIGS: Record<CardContext, {
     },
     theme: {
       gothic: { scanlines: true, textShadow: true, borderGradient: true },
-      faction: { glowEffects: true, atmosphericEffects: true }
+      faction: { glowEffects: true, atmosphericEffects: false }
     },
     layout: {
-      header: { height: '20%', padding: 'p-2 md:p-3' },
-      art: { aspectRatio: '16/9', height: '50%' },
-      footer: { height: '30%', padding: 'px-2 md:px-3 pb-2' }
+      header: { height: '18%', padding: 'p-2' },
+      art: { aspectRatio: '16/9', height: '52%' },
+      footer: { height: '30%', padding: 'px-2 pb-2' }
     }
   },
 

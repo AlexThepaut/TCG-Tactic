@@ -64,7 +64,6 @@ const Card: React.FC<CardProps> = ({
   return (
     <UnifiedCard
       card={card}
-      context="game"
       handIndex={handIndex}
       faction={faction}
       resources={resources}

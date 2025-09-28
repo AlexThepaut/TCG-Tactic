@@ -13,7 +13,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import { mobileOptimizations } from '@/utils/touchInteractions';
-import Card from './Card';
+import UnifiedCard from '@/components/shared/UnifiedCard';
 import type { GameCard, Faction } from '@/types';
 
 export interface HandProps {
@@ -358,7 +358,7 @@ const Hand: React.FC<HandProps> = ({
                         variants={cardVariants}
                         className="flex-shrink-0"
                       >
-                        <Card
+                        <UnifiedCard
                           card={card}
                           handIndex={index}
                           faction={faction}
@@ -366,10 +366,10 @@ const Hand: React.FC<HandProps> = ({
                           isPlayable={isMyTurn}
                           isSelected={selectedCardIndex === index}
                           showDetails={showDetails}
-                          onSelect={handleCardSelect}
-                          onDragStart={handleCardDragStart}
-                          onDragEnd={handleCardDragEnd}
-                          onTouch={handleCardTouch}
+                          onClick={(card) => handleCardSelect(card, index)}
+                          onDragStart={(card, handIndex) => handleCardDragStart(card, handIndex ?? index)}
+                          onDragEnd={(card, handIndex, didDrop) => handleCardDragEnd(card, handIndex ?? index, didDrop ?? false)}
+                          onTouch={(e, card) => handleCardTouch(e, card, index)}
                         />
                       </motion.div>
                     ))}
