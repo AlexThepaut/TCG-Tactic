@@ -49,6 +49,7 @@ import { questService } from '../../services/questService';
 import { placementService } from '../../services/placementService';
 import { gameStateRepository } from '../../repositories/GameStateRepository';
 import { gameActionLogger } from '../../services/GameActionLogger';
+import { combatService } from '../../services/combatService';
 import {
   PLACEMENT_ERROR_CODES,
   formatErrorForClient,
@@ -691,7 +692,8 @@ async function handlePlaceUnit(
 }
 
 /**
- * Handle attack action
+ * Handle attack action - Enhanced with Task 1.3D Combat Logic Engine
+ * Performance requirement: <100ms for Socket.io synchronization
  */
 async function handleAttack(
   socket: AuthenticatedSocket,
@@ -699,6 +701,8 @@ async function handleAttack(
   data: AttackData,
   callback: (response: GameActionResponse) => void
 ): Promise<void> {
+  const startTime = performance.now();
+
   try {
     if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'attack')) {
       return callback({
@@ -716,72 +720,148 @@ async function handleAttack(
     }
 
     const userId = parseInt(socket.userData?.userId || '0');
+    const attackerPos = { row: data.attackerPosition.x, col: data.attackerPosition.y };
+    const targetPos = { row: data.targetPosition.x, col: data.targetPosition.y };
 
-    // Create attack action
-    const actionData: AttackActionData = {
-      attackerPosition: { row: data.attackerPosition.x, col: data.attackerPosition.y },
-      targetPosition: { row: data.targetPosition.x, col: data.targetPosition.y },
-      attackType: 'normal'
-    };
+    loggers.game.info('Processing attack request', {
+      gameId: socket.gameId,
+      userId,
+      attackerPos,
+      targetPos
+    });
 
-    const action: import('../../types/gameState').GameAction = {
-      id: uuidv4(),
-      gameId: parseInt(socket.gameId!),
-      playerId: userId,
-      actionType: 'attack',
-      turn: gameState.turn,
-      phase: gameState.phase,
-      timestamp: new Date(),
-      actionData: actionData,
-      isValid: false,
-      resourceCost: 0
-    };
+    // Enhanced attack validation using CombatService
+    const validation = combatService.validateAttack(
+      gameState,
+      userId,
+      attackerPos,
+      targetPos
+    );
 
-    // Validate action
-    const validation = gameValidationService.validateAction(gameState, action);
     if (!validation.isValid) {
+      loggers.game.warn('Attack validation failed', {
+        gameId: socket.gameId,
+        userId,
+        attackerPos,
+        targetPos,
+        errors: validation.errors.map(e => e.message)
+      });
+
       return callback({
         success: false,
-        error: `Action validation failed: ${validation.errors.map(e => e.message).join(', ')}`
+        error: `Attack failed: ${validation.errors.map(e => e.message).join(', ')}`
       });
     }
 
-    // Execute action
-    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+    // Execute enhanced combat logic
+    const combatResult = await performanceMonitor.monitorSocketOperation(
+      () => combatService.executeAttack(gameState, userId, attackerPos, targetPos),
+      'combat_execution'
+    );
 
-    // Update game state
+    if (!combatResult.success) {
+      return callback({
+        success: false,
+        error: 'Combat execution failed'
+      });
+    }
+
+    // Update game state with combat results
     const updatedState = await gameStateService.updateGameState(
       socket.gameId,
-      newState,
+      gameState,
       gameState.version
     );
 
-    // Convert to legacy format
-    const legacyState = convertToLegacyFormat(updatedState);
+    // Optimized real-time broadcasting with detailed combat events
+    await performanceMonitor.monitorSocketOperation(
+      async () => {
+        const legacyState = convertToLegacyFormat(updatedState);
 
-    // Broadcast action to all players
-    io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
-    io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
+        // Prepare detailed combat event data
+        const combatEventData = {
+          attackerId: userId,
+          attacker: {
+            name: combatResult.attacker.unit.name,
+            position: combatResult.attacker.position,
+            damage: combatResult.attacker.damage,
+            destroyed: combatResult.attacker.destroyed,
+            newHealth: combatResult.attacker.newHealth
+          },
+          target: {
+            name: combatResult.target.unit.name,
+            position: combatResult.target.position,
+            damage: combatResult.target.damage,
+            destroyed: combatResult.target.destroyed,
+            newHealth: combatResult.target.newHealth
+          },
+          factionEffects: combatResult.factionEffects,
+          questProgress: combatResult.questProgress
+        };
 
+        // Broadcast combat events to all players in game room
+        await Promise.all([
+          // Broadcast detailed combat result
+          broadcastToGameRoom(io, socket.gameId!, 'game:combat_result', combatEventData),
+          // Broadcast state update
+          broadcastToGameRoom(io, socket.gameId!, 'game:state_update', legacyState),
+          // Broadcast to spectators
+          broadcastToSpectators(io, socket.gameId!, 'game:combat_spectator', combatEventData)
+        ]);
+
+        return legacyState;
+      },
+      'combat_broadcast'
+    );
+
+    // Create legacy action for backward compatibility
+    const action = {
+      id: uuidv4(),
+      playerId: userId.toString(),
+      type: 'attack' as const,
+      data: {
+        attackerPosition: data.attackerPosition,
+        targetPosition: data.targetPosition
+      },
+      timestamp: new Date(),
+      turn: gameState.turn,
+      phase: gameState.phase,
+      resourceCost: 0
+    };
+
+    const duration = performance.now() - startTime;
     callback({
       success: true,
       message: 'Attack executed successfully',
-      gameState: legacyState as any,
-      action: convertActionToLegacy(action)
+      gameState: convertToLegacyFormat(updatedState) as any,
+      action: action,
+      validMoves: [] // Could include valid attack targets for next action
+    });
+
+    loggers.game.info('Combat completed successfully', {
+      gameId: socket.gameId,
+      userId,
+      attackerName: combatResult.attacker.unit.name,
+      targetName: combatResult.target.unit.name,
+      attackerDamage: combatResult.attacker.damage,
+      targetDamage: combatResult.target.damage,
+      factionEffects: combatResult.factionEffects.length,
+      duration: `${duration.toFixed(2)}ms`
     });
 
   } catch (error: any) {
-    loggers.game.error('Attack failed', {
+    loggers.game.error('Attack handler failed', {
       socketId: socket.id,
       userId: socket.userData?.userId || 'unknown',
       gameId: socket.gameId,
       data,
-      error: error.message
+      error: error.message,
+      stack: error.stack
     });
 
     callback({
       success: false,
-      error: 'Failed to execute attack'
+      error: 'Failed to execute attack due to server error'
     });
   }
 }
@@ -843,7 +923,7 @@ async function handleCastSpell(
       });
     }
 
-    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+    const { newState, results } = await gameMechanicsService.executeAction(gameState, action);
     const updatedState = await gameStateService.updateGameState(socket.gameId, newState, gameState.version);
 
     const legacyState = convertToLegacyFormat(updatedState);
@@ -926,7 +1006,7 @@ async function handleEndTurn(
     }
 
     // Execute action
-    const { newState, results } = gameMechanicsService.executeAction(gameState, action);
+    const { newState, results } = await gameMechanicsService.executeAction(gameState, action);
 
     // Progress to next phase if needed
     const progressedState = gameMechanicsService.progressPhase(newState);
@@ -1015,7 +1095,7 @@ async function handleSurrender(
     };
 
     // Execute surrender
-    const { newState } = gameMechanicsService.executeAction(gameState, action);
+    const { newState } = await gameMechanicsService.executeAction(gameState, action);
     const updatedState = await gameStateService.updateGameState(socket.gameId, newState, gameState.version);
 
     // Broadcast game end
@@ -1108,7 +1188,7 @@ async function autoEndTurn(
     };
 
     // Execute end turn
-    const { newState } = gameMechanicsService.executeAction(gameState, action);
+    const { newState } = await gameMechanicsService.executeAction(gameState, action);
     const progressedState = gameMechanicsService.progressPhase(newState);
     const updatedState = await gameStateService.updateGameState(gameId, progressedState, gameState.version);
 

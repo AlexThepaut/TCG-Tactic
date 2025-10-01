@@ -6,7 +6,7 @@ Feature-by-feature implementation of core game mechanics with parallel backend/f
 ## Tasks
 - **1.3A**: Card System Foundation - Backend card models and seed data
 - **1.3B**: Unit Placement Backend - Placement logic with validation
-- **1.3C**: Drag & Drop Interface - Frontend card placement UI
+- **1.3C**: Click-Based Card Placement Interface - Frontend card placement UI with two-step interaction
 - **1.3D**: Combat Logic Engine - Backend combat calculations
 - **1.3E**: Combat User Interface - Frontend combat interactions
 - **1.3F**: Turn Management System - Backend turn cycle management

@@ -22,6 +22,7 @@ import {
 } from '../types/gameState';
 import { Card, Faction } from '../types/database';
 import { logger, loggers } from '../utils/logger';
+import { combatService } from './combatService';
 
 /**
  * Game Mechanics Service
@@ -71,7 +72,7 @@ export class GameMechanicsService {
   /**
    * Execute a game action and return updated state with results
    */
-  executeAction(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
+  async executeAction(gameState: GameState, action: GameAction): Promise<{ newState: GameState; results: GameActionResult[] }> {
     try {
       loggers.game.info('Executing game action', {
         gameId: gameState.id,
@@ -96,7 +97,7 @@ export class GameMechanicsService {
           break;
 
         case 'attack':
-          const attackResults = this.executeAttack(newState, action);
+          const attackResults = await this.executeAttack(newState, action);
           newState.players = attackResults.newState.players;
           results = attackResults.results;
           break;
@@ -381,7 +382,138 @@ export class GameMechanicsService {
     return { newState: gameState, results };
   }
 
-  private executeAttack(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
+  private async executeAttack(gameState: GameState, action: GameAction): Promise<{ newState: GameState; results: GameActionResult[] }> {
+    const data = action.actionData as AttackActionData;
+    const results: GameActionResult[] = [];
+
+    try {
+      // Use enhanced CombatService for attack execution
+      const combatResult = await combatService.executeAttack(
+        gameState,
+        action.playerId,
+        data.attackerPosition,
+        data.targetPosition
+      );
+
+      if (!combatResult.success) {
+        loggers.game.error('Combat execution failed in attack action', {
+          gameId: gameState.id,
+          actionId: action.id,
+          playerId: action.playerId
+        });
+        return { newState: gameState, results };
+      }
+
+      // Convert CombatService results to GameActionResults
+      results.push({
+        type: 'damage_dealt',
+        description: `${combatResult.attacker.unit.name} deals ${combatResult.target.damage} damage to ${combatResult.target.unit.name}`,
+        involvedCards: [combatResult.attacker.unit.id.toString(), combatResult.target.unit.id.toString()],
+        data: {
+          damage: combatResult.target.damage,
+          position: combatResult.target.position
+        }
+      });
+
+      if (combatResult.attacker.damage > 0) {
+        results.push({
+          type: 'damage_dealt',
+          description: `${combatResult.target.unit.name} deals ${combatResult.attacker.damage} damage to ${combatResult.attacker.unit.name}`,
+          involvedCards: [combatResult.target.unit.id.toString(), combatResult.attacker.unit.id.toString()],
+          data: {
+            damage: combatResult.attacker.damage,
+            position: combatResult.attacker.position
+          }
+        });
+      }
+
+      // Handle destroyed units
+      if (combatResult.target.destroyed) {
+        results.push({
+          type: 'card_destroyed',
+          description: `${combatResult.target.unit.name} destroyed`,
+          involvedCards: [combatResult.target.unit.id.toString()],
+          data: { position: combatResult.target.position }
+        });
+      }
+
+      if (combatResult.attacker.destroyed) {
+        results.push({
+          type: 'card_destroyed',
+          description: `${combatResult.attacker.unit.name} destroyed`,
+          involvedCards: [combatResult.attacker.unit.id.toString()],
+          data: { position: combatResult.attacker.position }
+        });
+      }
+
+      // Add faction effect results
+      for (const factionEffect of combatResult.factionEffects) {
+        results.push({
+          type: 'effect_applied',
+          description: `${factionEffect.effectName}: ${factionEffect.description}`,
+          involvedCards: factionEffect.unitsAffected.map(pos =>
+            gameState.players.player1.board[pos.row]?.[pos.col]?.id?.toString() ||
+            gameState.players.player2.board[pos.row]?.[pos.col]?.id?.toString() ||
+            'unknown'
+          ).filter(id => id !== 'unknown'),
+          data: {
+            faction: factionEffect.faction,
+            effect: factionEffect.effectName,
+            positions: factionEffect.unitsAffected,
+            parameters: factionEffect.parameters
+          }
+        });
+      }
+
+      // Add quest progress results
+      if (combatResult.questProgress) {
+        for (const questUpdate of combatResult.questProgress) {
+          results.push({
+            type: 'quest_progress',
+            description: questUpdate.completed
+              ? `Quest ${questUpdate.questId} completed!`
+              : `Quest progress: ${questUpdate.newProgress}`,
+            involvedCards: [],
+            data: {
+              questId: questUpdate.questId,
+              progress: questUpdate.newProgress,
+              progressChange: questUpdate.progressChange,
+              completed: questUpdate.completed
+            }
+          });
+        }
+      }
+
+      loggers.game.info('Enhanced combat execution completed', {
+        gameId: gameState.id,
+        actionId: action.id,
+        attackerName: combatResult.attacker.unit.name,
+        targetName: combatResult.target.unit.name,
+        attackerDestroyed: combatResult.attacker.destroyed,
+        targetDestroyed: combatResult.target.destroyed,
+        factionEffectsCount: combatResult.factionEffects.length,
+        questUpdatesCount: combatResult.questProgress?.length || 0
+      });
+
+      return { newState: gameState, results };
+
+    } catch (error: any) {
+      loggers.game.error('Enhanced combat execution failed', {
+        gameId: gameState.id,
+        actionId: action.id,
+        playerId: action.playerId,
+        error: error.message
+      });
+
+      // Fallback to basic combat if enhanced combat fails
+      return this.executeBasicAttack(gameState, action);
+    }
+  }
+
+  /**
+   * Fallback basic attack method for error recovery
+   */
+  private executeBasicAttack(gameState: GameState, action: GameAction): { newState: GameState; results: GameActionResult[] } {
     const data = action.actionData as AttackActionData;
     const results: GameActionResult[] = [];
 
@@ -400,7 +532,7 @@ export class GameMechanicsService {
       return { newState: gameState, results };
     }
 
-    // Process combat
+    // Process basic combat
     const combatResult = this.processCombat(attacker, target);
 
     // Apply damage
@@ -455,6 +587,11 @@ export class GameMechanicsService {
         data: { damage: combatResult.attackerDamage }
       });
     }
+
+    loggers.game.warn('Used fallback basic combat due to enhanced combat failure', {
+      gameId: gameState.id,
+      actionId: action.id
+    });
 
     return { newState: gameState, results };
   }

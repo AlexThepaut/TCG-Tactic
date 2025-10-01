@@ -67,6 +67,7 @@ npm run analyze:meta    # Analyze current meta
 - **Socket.io first**: Use WebSocket events for all game interactions, not REST API
 - **Real-time sync**: All game state changes broadcast to players immediately
 - **Event-driven**: Game logic based on Socket events (game:place_unit, game:attack, etc.)
+- **Server-side validation**: Valid placement positions calculated server-side and sent to client for security and consistency
 
 ### Game State Management
 ```typescript
@@ -90,6 +91,13 @@ interface PlayerData {
   board: (Card | null)[][];  // 3x5 grid
   resources: number;         // Void Echoes (0-10)
   questId: string;          // Secret victory condition
+}
+
+// Client-side UI state for click-based card placement
+interface SelectionState {
+  selectedCard: Card | null;      // Currently selected card from hand
+  validPositions: Position[];     // Valid grid positions for placement
+  selectionMode: 'card' | 'target' | null;  // Current interaction step
 }
 ```
 
@@ -136,7 +144,13 @@ All game interactions use Socket.io events instead of REST API:
 // Game Events
 'game:create'       // Create new game
 'game:join'         // Join existing game
-'game:place_unit'   // Place card on grid
+
+// Click-based placement (two-step interaction)
+'game:card_selected'   // Step 1: Player selects card from hand
+'game:valid_positions' // Server responds with valid placement zones
+'game:place_unit'      // Step 2: Player clicks valid position to place card
+'game:selection_cleared' // Player deselects card or cancels placement
+
 'game:attack'       // Attack between units
 'game:end_turn'     // End player turn
 'game:state_update' // Broadcast state changes
@@ -150,7 +164,16 @@ All game interactions use Socket.io events instead of REST API:
 ## Testing Strategy
 
 ### Key Testing Areas
-- **Game Logic**: Unit placement validation, combat resolution, turn management
+- **Game Logic**: Combat resolution, turn management, resource validation
+- **Click-Based Placement**:
+  - Card selection visual feedback and state management
+  - Valid position highlighting based on faction formations
+  - Placement completion with cost validation
+  - Selection cancellation (deselect, switch cards)
+  - Error handling (invalid position, insufficient resources)
+  - Socket event sequence verification (select → validate → place)
+  - Mobile touch interaction (tap-select, tap-place, 44px minimum targets)
+  - Concurrent selection attempts during opponent's turn
 - **Real-time Sync**: Socket.io event handling and state synchronization
 - **Deck Validation**: 40-card limit, faction consistency, max 2 per card
 - **Quest Completion**: All 9 victory conditions function correctly
