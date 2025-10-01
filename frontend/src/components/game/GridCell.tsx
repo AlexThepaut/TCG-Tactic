@@ -1,6 +1,6 @@
 /**
- * GridCell Component - Interactive drop zone for tactical grid
- * Handles faction formations, visual feedback, and drop validation
+ * GridCell Component - Interactive click-based grid cell for tactical placement
+ * Handles faction formations, visual feedback, and click-based interactions
  */
 import React, { memo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -12,17 +12,18 @@ import {
   XMarkIcon,
   CheckIcon
 } from '@heroicons/react/24/solid';
-import { useDropCell } from '@/hooks/useDragDrop';
 import type { GamePosition, GameCard, Faction } from '@/types';
-import type { UseDragDropOptions } from '@/hooks/useDragDrop';
 
 export interface GridCellProps {
   position: GamePosition;
   card: GameCard | null;
   faction: Faction;
   isPlayerCell: boolean;
+  isValidPosition: boolean;
+  isSelected?: boolean;
+  isHighlighted?: boolean;
+  onClick?: (position: GamePosition) => void;
   className?: string;
-  options: UseDragDropOptions;
 }
 
 const GridCell: React.FC<GridCellProps> = ({
@@ -30,18 +31,18 @@ const GridCell: React.FC<GridCellProps> = ({
   card,
   faction,
   isPlayerCell,
-  className,
-  options
+  isValidPosition,
+  isSelected = false,
+  isHighlighted = false,
+  onClick,
+  className
 }) => {
-  const {
-    isOver,
-    canDrop,
-    isValidDrop,
-    dragItem,
-    isValidPosition,
-    cellVariant,
-    drop
-  } = useDropCell(position, options);
+  // Handle cell click
+  const handleClick = useCallback(() => {
+    if (onClick && (isValidPosition || isHighlighted)) {
+      onClick(position);
+    }
+  }, [onClick, position, isValidPosition, isHighlighted]);
 
   // Faction-specific styling
   const getFactionStyles = useCallback(() => {
@@ -95,75 +96,55 @@ const GridCell: React.FC<GridCellProps> = ({
 
   // Get cell styling based on current state
   const getCellStyling = useCallback(() => {
-    switch (cellVariant) {
-      case 'valid-drop':
-        return clsx(styles.validDrop, 'transform scale-105');
-      case 'invalid-drop':
-        return clsx(styles.invalidDrop, 'transform scale-95');
-      case 'can-drop':
-        return clsx(styles.validHover, 'transform scale-102');
-      case 'occupied':
-        return styles.occupied;
-      case 'invalid':
-        return styles.invalid;
-      default:
-        return isValidPosition ? styles.valid : styles.invalid;
+    if (card) {
+      return styles.occupied;
     }
-  }, [cellVariant, styles, isValidPosition]);
-
-  // Get drop indicator
-  const getDropIndicator = useCallback(() => {
-    if (!isOver || !dragItem) return null;
-
-    if (isValidDrop) {
-      return (
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          className="absolute inset-0 flex items-center justify-center"
-        >
-          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
-            <CheckIcon className="w-5 h-5 text-white" />
-          </div>
-        </motion.div>
-      );
-    } else {
-      return (
-        <motion.div
-          initial={{ scale: 0, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0, opacity: 0 }}
-          className="absolute inset-0 flex items-center justify-center"
-        >
-          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-            <XMarkIcon className="w-5 h-5 text-white" />
-          </div>
-        </motion.div>
-      );
+    if (isSelected) {
+      return clsx(styles.validDrop, 'transform scale-105');
     }
-  }, [isOver, dragItem, isValidDrop]);
+    if (isHighlighted) {
+      return clsx(styles.validHover, 'transform scale-102 cursor-pointer');
+    }
+    return isValidPosition ? styles.valid : styles.invalid;
+  }, [card, isSelected, isHighlighted, styles, isValidPosition]);
+
+  // Get placement indicator for highlighted cells
+  const getPlacementIndicator = useCallback(() => {
+    if (!isHighlighted || card) return null;
+
+    return (
+      <motion.div
+        initial={{ scale: 0, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0, opacity: 0 }}
+        className="absolute inset-0 flex items-center justify-center"
+      >
+        <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center">
+          <CheckIcon className="w-5 h-5 text-white" />
+        </div>
+      </motion.div>
+    );
+  }, [isHighlighted, card]);
 
   // Animation variants
   const cellVariants = {
     idle: {
       scale: 1,
-      rotateY: 0,
       transition: { duration: 0.2 }
     },
     hover: {
       scale: 1.02,
       transition: { duration: 0.1 }
     },
-    drop: {
-      scale: 1.1,
+    selected: {
+      scale: 1.05,
       transition: { duration: 0.1 }
     }
   };
 
   const getCellAnimationVariant = () => {
-    if (isValidDrop) return 'drop';
-    if (isOver) return 'hover';
+    if (isSelected) return 'selected';
+    if (isHighlighted) return 'hover';
     return 'idle';
   };
 
@@ -229,31 +210,32 @@ const GridCell: React.FC<GridCellProps> = ({
 
   return (
     <motion.div
-      ref={drop}
       variants={cellVariants}
       initial="idle"
       animate={getCellAnimationVariant()}
+      onClick={handleClick}
       className={clsx(
         "relative aspect-square border-2 rounded-lg transition-all duration-200",
         "min-h-16 md:min-h-20 lg:min-h-24",
         "backdrop-blur-sm",
         getCellStyling(),
+        (isValidPosition || isHighlighted) && !card && "cursor-pointer hover:scale-105",
         className
       )}
-      data-drop-cell
+      data-click-cell
       data-x={position.x}
       data-y={position.y}
       data-testid={`grid-cell-${position.x}-${position.y}`}
     >
       {/* Position Indicator */}
-      {!card && !isOver && (
+      {!card && !isHighlighted && (
         <div className="absolute top-1 left-1 text-xs opacity-30 font-mono">
           {position.x},{position.y}
         </div>
       )}
 
       {/* Formation Indicator */}
-      {!card && isValidPosition && !isOver && (
+      {!card && isValidPosition && !isHighlighted && (
         <div className="absolute inset-0 flex items-center justify-center opacity-30">
           <div className={clsx("w-6 h-6", styles.accent)}>
             <ShieldCheckIcon />
@@ -262,7 +244,7 @@ const GridCell: React.FC<GridCellProps> = ({
       )}
 
       {/* Invalid Position Indicator */}
-      {!isValidPosition && !card && (
+      {!isValidPosition && !card && !isHighlighted && (
         <div className="absolute inset-0 flex items-center justify-center opacity-20">
           <XMarkIcon className="w-6 h-6 text-gray-500" />
         </div>
@@ -273,37 +255,18 @@ const GridCell: React.FC<GridCellProps> = ({
         {renderPlacedCard()}
       </AnimatePresence>
 
-      {/* Drop Indicator */}
+      {/* Placement Indicator */}
       <AnimatePresence>
-        {getDropIndicator()}
+        {getPlacementIndicator()}
       </AnimatePresence>
 
-      {/* Drag Preview */}
-      {isOver && dragItem && !card && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.8 }}
-          animate={{ opacity: 0.7, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.8 }}
-          className={clsx(
-            "absolute inset-0 rounded-lg border-2 border-dashed p-1",
-            canDrop ? "border-green-400 bg-green-500/20" : "border-red-400 bg-red-500/20"
-          )}
-        >
-          <div className="w-full h-full bg-white/20 rounded flex items-center justify-center">
-            <span className="text-xs font-semibold text-center">
-              {dragItem.card.name}
-            </span>
-          </div>
-        </motion.div>
-      )}
-
-      {/* Highlight ring for valid positions during drag */}
-      {!card && isValidPosition && dragItem && !isOver && (
+      {/* Highlight ring for valid placement positions */}
+      {!card && isHighlighted && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="absolute inset-0 rounded-lg border border-blue-400/50 bg-blue-500/10"
+          className="absolute inset-0 rounded-lg border-2 border-green-400 bg-green-500/20 pointer-events-none"
         />
       )}
     </motion.div>

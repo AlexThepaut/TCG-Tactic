@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { useDrop } from 'react-dnd';
 import { clsx } from 'clsx';
 import { motion } from 'framer-motion';
 import { useGridLayout, useResponsiveLayout } from '@/hooks/useResponsiveLayout';
@@ -14,9 +13,7 @@ export interface TacticalGridProps {
   highlightedCells?: GamePosition[];
   attackableCells?: GamePosition[];
   onCellClick?: (position: GamePosition) => void;
-  onCardDrop?: (card: GameCard, position: GamePosition) => void;
-  rotated?: boolean; // Old prop for 180-degree rotation
-  faceToFace?: boolean; // New prop for 90-degree face-to-face rotation
+  faceToFace?: boolean; // 90-degree face-to-face rotation
   className?: string;
 }
 
@@ -27,11 +24,8 @@ interface GridCellProps {
   isHighlighted: boolean;
   isAttackable: boolean;
   isInteractive: boolean;
-  cellWidth: number;
-  cellHeight: number;
   faction: string;
   onClick?: (position: GamePosition) => void;
-  onDrop?: (card: GameCard, position: GamePosition) => void;
 }
 
 const GridCell: React.FC<GridCellProps> = ({
@@ -43,21 +37,13 @@ const GridCell: React.FC<GridCellProps> = ({
   isInteractive,
   faction,
   onClick,
-  onDrop,
 }) => {
-  const [{ isOver, canDrop }, drop] = useDrop(() => ({
-    accept: 'card',
-    drop: (item: { card: GameCard }) => {
-      if (onDrop && isPlayable) {
-        onDrop(item.card, position);
-      }
-    },
-    canDrop: () => isPlayable,
-    collect: (monitor) => ({
-      isOver: monitor.isOver(),
-      canDrop: monitor.canDrop(),
-    }),
-  }), [isPlayable, onDrop, position]);
+  // Handle cell click for placement
+  const handleCellClick = () => {
+    if (isInteractive && onClick && (isPlayable || isHighlighted)) {
+      onClick(position);
+    }
+  };
 
   const getFactionColor = (faction: string) => {
     const classes = getFactionClasses(faction as any, 'accent');
@@ -66,7 +52,7 @@ const GridCell: React.FC<GridCellProps> = ({
   };
 
   const cellClassName = clsx(
-    'relative border-2 transition-all duration-300 cursor-pointer flex items-center justify-center group',
+    'relative border-2 transition-all duration-300 flex items-center justify-center group',
     {
       // Base states
       'border-gothic-medium/30 bg-gothic-darker/30': !isPlayable && !card,
@@ -74,23 +60,22 @@ const GridCell: React.FC<GridCellProps> = ({
       'border-imperial-600/50 bg-gothic-darkest/60': card && !isHighlighted,
 
       // Interactive states
-      'border-imperial-400 bg-imperial-500/20 animate-pulse shadow-lg shadow-imperial-500/30': isPlayable && isOver && canDrop,
-      'border-imperial-300 bg-imperial-400/20 box-glow-imperial': isHighlighted,
+      'border-green-400 bg-green-500/20 cursor-pointer shadow-lg shadow-green-500/30': isHighlighted && !card,
+      'border-imperial-300 bg-imperial-400/20 box-glow-imperial': isHighlighted && card,
       'border-blood-400 bg-blood-500/20 shadow-lg shadow-blood-500/50 animate-flicker': isAttackable,
 
       // Hover states
-      'hover:border-opacity-80 hover:bg-opacity-30': isInteractive,
-      'cursor-not-allowed opacity-40': !isPlayable && isInteractive,
+      'hover:border-opacity-80 hover:bg-opacity-30 cursor-pointer': isInteractive && (isPlayable || isHighlighted),
+      'cursor-not-allowed opacity-40': !isPlayable && isInteractive && !isHighlighted,
     }
   );
 
   return (
     <motion.div
-      ref={drop}
       className={clsx(cellClassName, 'aspect-square w-full h-full min-h-0')}
-      onClick={() => isInteractive && onClick?.(position)}
-      {...(isInteractive && { whileHover: { scale: 1.02 } })}
-      {...(isInteractive && { whileTap: { scale: 0.98 } })}
+      onClick={handleCellClick}
+      {...(isInteractive && (isPlayable || isHighlighted) && { whileHover: { scale: 1.02 } })}
+      {...(isInteractive && (isPlayable || isHighlighted) && { whileTap: { scale: 0.98 } })}
       layout
     >
       {/* Grid Position Indicator */}
@@ -141,17 +126,12 @@ const GridCell: React.FC<GridCellProps> = ({
         </motion.div>
       )}
 
-      {/* Drop Zone Indicator */}
-      {isPlayable && !card && (
+      {/* Placement Zone Indicator */}
+      {isHighlighted && !card && (
         <div className="absolute inset-0 flex items-center justify-center">
-          <div className={clsx('w-8 h-8 border-2 border-dashed transition-all duration-300 relative', {
-            'border-imperial-400 bg-imperial-500/20 shadow-lg shadow-imperial-500/30': isOver && canDrop,
-            'border-void-600/50': !isOver,
-          })}>
-            {isOver && canDrop && (
-              <div className="absolute inset-0 bg-imperial-500/10 animate-pulse"></div>
-            )}
-            <div className="w-2 h-2 bg-current opacity-50 mx-auto"></div>
+          <div className="w-8 h-8 border-2 border-green-400 bg-green-500/20 shadow-lg shadow-green-500/30 transition-all duration-300">
+            <div className="absolute inset-0 bg-green-500/10 animate-pulse"></div>
+            <div className="w-2 h-2 bg-green-400 opacity-50 mx-auto mt-3"></div>
           </div>
         </div>
       )}
@@ -167,7 +147,6 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
   highlightedCells = [],
   attackableCells = [],
   onCellClick,
-  onCardDrop,
   faceToFace = false,
   className,
 }) => {
@@ -204,10 +183,10 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
           if (player === 'current') {
             // For current player, flip horizontally so it faces the opponent
             // Map to transformed[col][2-row] to flip the rows
-            transformed[col]![2 - row] = cell;
+            transformed[col]![2 - row] = cell !== undefined ? cell : null;
           } else {
             // For opponent, keep normal transformation
-            transformed[col]![row] = cell;
+            transformed[col]![row] = cell !== undefined ? cell : null;
           }
         }
       }
@@ -299,11 +278,8 @@ const TacticalGrid: React.FC<TacticalGridProps> = ({
                   isHighlighted={isHighlighted}
                   isAttackable={isAttackable}
                   isInteractive={interactive}
-                  cellWidth={0} // Will use CSS instead
-                  cellHeight={0} // Will use CSS instead
                   faction={faction}
-                  onClick={onCellClick ?? undefined}
-                  onDrop={onCardDrop ?? undefined}
+                  {...(onCellClick && { onClick: onCellClick })}
                 />
               );
             })

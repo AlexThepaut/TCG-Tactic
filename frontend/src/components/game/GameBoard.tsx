@@ -1,12 +1,9 @@
 /**
- * GameBoard Component - Clean header-only implementation
- * Starting fresh with just turn info, timer, and action buttons
+ * GameBoard Component - Click-based card placement interface
+ * Implements two-step interaction: select card → click position
  */
 import React, { memo, useCallback, useState } from 'react';
 import { clsx } from 'clsx';
-import { DndProvider } from 'react-dnd';
-import { HTML5Backend } from 'react-dnd-html5-backend';
-import { TouchBackend } from 'react-dnd-touch-backend';
 import {
   ClockIcon,
   CogIcon,
@@ -15,7 +12,7 @@ import useGameSocket from '@/hooks/useGameSocket';
 import { formatFactionName } from '@/utils/factionThemes';
 import PlayerPanel from './PlayerPanel';
 import TacticalGrid from './TacticalGrid';
-import type { GameState } from '@/types';
+import type { GameState, SelectionState, GameCard, GamePosition } from '@/types';
 
 export interface GameBoardProps {
   gameState: GameState;
@@ -57,6 +54,13 @@ const GameBoard: React.FC<GameBoardProps> = ({
   // Local state for UI interactions
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false);
+
+  // Selection state for click-based card placement
+  const [selectionState, setSelectionState] = useState<SelectionState>({
+    selectedCard: null,
+    validPositions: [],
+    selectionMode: null
+  });
 
   // Player data - use socket data with fallback to gameState
   const currentPlayer = getCurrentPlayer() || gameState.players.player1;
@@ -131,13 +135,62 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setShowSurrenderConfirm(false);
   }, []);
 
+  // Handle card selection (Step 1 of two-step placement)
+  // TODO: This will be connected to the Hand component once it's integrated
+  const handleCardClick = useCallback((card: GameCard) => {
+    if (!myTurn || isProcessingAction) return;
 
-  // Detect touch device for DnD backend
-  const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-  const dndBackend = isTouchDevice ? TouchBackend : HTML5Backend;
+    // If clicking the same card, deselect it
+    if (selectionState.selectedCard?.id === card.id) {
+      setSelectionState({
+        selectedCard: null,
+        validPositions: [],
+        selectionMode: null
+      });
+      return;
+    }
+
+    // TODO: Call backend to get valid positions for this card
+    // For now, using faction formation positions as valid positions
+    const validPositions: GamePosition[] = []; // Will be populated by backend
+
+    setSelectionState({
+      selectedCard: card,
+      validPositions,
+      selectionMode: 'target'
+    });
+  }, [myTurn, isProcessingAction, selectionState.selectedCard]);
+
+  // Suppress unused warning - this will be used when Hand component is integrated
+  void handleCardClick;
+
+  // Handle cell click for placement (Step 2 of two-step placement)
+  const handleCellClick = useCallback((position: GamePosition) => {
+    if (!selectionState.selectedCard || !myTurn || isProcessingAction) return;
+
+    // Validate position is in valid positions
+    const isValidPosition = selectionState.validPositions.some(
+      pos => pos.x === position.x && pos.y === position.y
+    );
+
+    if (!isValidPosition) {
+      // TODO: Show error feedback
+      console.error('Invalid placement position');
+      return;
+    }
+
+    // TODO: Emit placement to backend via socket
+    console.log('Placing card:', selectionState.selectedCard.id, 'at position:', position);
+
+    // Clear selection after successful placement
+    setSelectionState({
+      selectedCard: null,
+      validPositions: [],
+      selectionMode: null
+    });
+  }, [selectionState, myTurn, isProcessingAction]);
 
   return (
-    <DndProvider backend={dndBackend}>
     <div className="h-full flex flex-col bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest relative">
       {/* Atmospheric effects */}
       <div className="absolute inset-0 opacity-20">
@@ -315,6 +368,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 board={currentPlayer.board}
                 faction={currentPlayer.faction}
                 interactive={myTurn}
+                highlightedCells={selectionState.validPositions}
+                onCellClick={handleCellClick}
                 faceToFace={true}
                 className="transform-gpu"
               />
@@ -353,7 +408,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
         </div>
       </div>
     </div>
-    </DndProvider>
   );
 };
 
