@@ -1,6 +1,7 @@
 /**
  * UnifiedCard Component - Classic TCG layout with Gothic theme preservation
  * Serves all three contexts: game, collection, and deck-builder
+ * Updated to use click-based interactions instead of drag-and-drop
  */
 import React, { memo, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -10,8 +11,6 @@ import {
   BoltIcon,
   HeartIcon
 } from '@heroicons/react/24/solid';
-import { useSafeDragCard } from '@/hooks/useSafeDragDrop';
-import type { GameCard } from '@/types';
 import type {
   UnifiedCardProps,
   FactionStyles,
@@ -31,20 +30,13 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   cardSize,
   className,
   onClick,
-  onDragStart,
-  onDragEnd,
-  onTouch,
   isPlayable = true,
   isSelected = false,
   isAffordable,
   showDetails = true,
-  showInteractions = true,
-  handIndex = 0,
   resources = 0,
   faction,
   quantity,
-  isInDeck = false,
-  canAddToDeck = false,
   disableAnimations = false,
   customAnimations
 }) => {
@@ -57,24 +49,17 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   const canAfford = isAffordable !== undefined ? isAffordable : card.cost <= resources;
   const canPlay = isPlayable && canAfford;
 
-  // Drag & drop integration (enabled when drag handlers are provided)
-  const dragEnabled = !!(onDragStart && onDragEnd);
-
-  const { isDragging, canDrag, drag } = useSafeDragCard(
-    dragEnabled ? card : null,
-    handIndex,
-    {
-      faction: cardFaction,
-      resources,
-      onDragStart: (cardItem: GameCard, handIndexItem?: number) => onDragStart?.(cardItem, handIndexItem),
-      onDragEnd: (cardItem: GameCard, handIndexItem?: number, didDrop?: boolean) => onDragEnd?.(cardItem, handIndexItem, didDrop)
+  // Click-based interaction handler
+  const handleCardClick = useCallback(() => {
+    if (onClick && canPlay) {
+      onClick(card);
     }
-  );
+  }, [onClick, card, canPlay]);
 
   // Get faction-specific styling
   const factionStyles = useMemo((): FactionStyles => {
     const styleConfig = FACTION_STYLE_CONFIGS[cardFaction];
-    return styleConfig ? styleConfig(canPlay, isDragging) : {
+    return styleConfig ? styleConfig(canPlay, false) : {
       border: 'border-gray-600',
       bg: 'bg-gray-100',
       text: 'text-gray-900',
@@ -82,7 +67,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       glow: '',
       gradient: 'from-gray-200 to-gray-300'
     };
-  }, [cardFaction, canPlay, isDragging]);
+  }, [cardFaction, canPlay]);
 
   // Get responsive sizing classes
   const getSizeClasses = useCallback((): string => {
@@ -92,11 +77,10 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
     }
 
     const dimensions = CARD_SIZES[effectiveSize];
-    if (dimensions && dimensions !== 'auto') {
+    if (dimensions && typeof dimensions === 'object' && 'width' in dimensions) {
       // Use specific pixel values for larger cards via CSS custom properties
       // This allows us to have precise control over card sizes
       const widthPx = dimensions.width;
-      const heightPx = dimensions.height;
 
       // Convert to Tailwind width classes with precise sizing
       return `aspect-[5/7]` +
@@ -130,42 +114,22 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   // Get current animation state
   const getCurrentVariant = useCallback((): string => {
     if (!canPlay && !canAfford) return 'disabled';
-    if (isDragging) return 'dragging';
     if (isSelected) return 'selected';
     return 'idle';
-  }, [canPlay, canAfford, isDragging, isSelected]);
-
-
-  // Handle card click
-  const handleClick = useCallback((e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (onClick) {
-      onClick(card);
-    }
-  }, [onClick, card]);
-
-  // Handle touch events
-  const handleTouchStart = useCallback((e: React.TouchEvent) => {
-    if (onTouch) {
-      onTouch(e, card);
-    }
-  }, [onTouch, card]);
+  }, [canPlay, canAfford, isSelected]);
 
 
   return (
     <motion.div
-      ref={dragEnabled ? drag : undefined}
       variants={animationVariants}
       initial="idle"
       animate={getCurrentVariant()}
       whileHover={canPlay && !disableAnimations ? "hover" : "idle"}
-      onClick={handleClick}
-      onTouchStart={handleTouchStart}
+      onClick={handleCardClick}
+      whileTap={canPlay && !disableAnimations ? { scale: 0.95 } : {}}
       className={clsx(
         // Base card structure with classic TCG proportions
-        "relative rounded-lg cursor-pointer select-none touch-manipulation backdrop-blur-sm",
+        "relative rounded-lg select-none touch-manipulation backdrop-blur-sm",
         "transform-gpu", // Enable hardware acceleration
 
         // Size classes
@@ -176,11 +140,11 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         factionStyles.bg,
         factionStyles.glow,
 
-        // Interaction states - enhanced hover glow
-        canPlay ? "hover:shadow-xl transition-all duration-300" : "opacity-60 cursor-not-allowed",
+        // Interaction states - enhanced hover glow and click-based selection
+        canPlay ? "hover:shadow-xl transition-all duration-300 cursor-pointer" : "opacity-60 cursor-not-allowed",
         // Add transitions for smooth glow effects
         "transition-shadow duration-500 ease-in-out",
-        isSelected && "ring-2 ring-offset-2 ring-blue-500",
+        isSelected && "ring-4 ring-blue-500 ring-offset-2 scale-105",
 
         // Gothic theme effects
         "scanlines",
@@ -189,10 +153,6 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         // Custom className
         className
       )}
-      style={{
-        opacity: isDragging ? 0.5 : 1,
-        cursor: dragEnabled && canDrag ? 'grab' : undefined
-      }}
       data-testid={`unified-card-${card.id}-${context}`}
     >
       {/* Classic TCG Layout - Art Top, Name Middle, Effects Bottom */}
@@ -324,14 +284,14 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         </div>
       </div>
 
-      {/* Dragging Indicator */}
+      {/* Selection Indicator */}
       <AnimatePresence>
-        {isDragging && (
+        {isSelected && (
           <motion.div
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 rounded-lg border-2 border-dashed border-blue-400 bg-blue-500/10 backdrop-blur-sm"
+            className="absolute inset-0 rounded-lg border-4 border-blue-400 bg-blue-500/10 backdrop-blur-sm pointer-events-none"
           />
         )}
       </AnimatePresence>

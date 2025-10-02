@@ -1,5 +1,15 @@
 # Task 1.3C: Drag & Drop Interface - Implementation Complete
 
+> **⚠️ HISTORICAL DOCUMENT**: This document describes the drag-and-drop system
+> that was replaced by click-based card placement on 2025-01-20.
+>
+> **Replacement**: See `/tasks/task-1-enhanced/phase-3/1.3C-click-placement-interface.md` for current implementation.
+>
+> **Migration**: Drag-and-drop dependencies were fully removed in phases 1-4 of the cleanup process.
+> Comprehensive migration analysis available at `/claudedocs/drag-drop-cleanup-analysis.md`.
+
+---
+
 ## 🎯 Implementation Summary
 
 I have successfully implemented a comprehensive drag & drop interface for TCG Tactique's tactical card placement system. This implementation provides a production-ready foundation for the game's core interaction mechanics.

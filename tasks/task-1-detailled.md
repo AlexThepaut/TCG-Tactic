@@ -100,6 +100,67 @@ tcg-tactique/
 
 ---
 
+### **Scénarios d'Interaction Détaillés - Placement Click-Based**
+
+Ces scénarios définissent le comportement exact du système de placement par clics.
+
+#### **Scénario 1 : Placement Réussi**
+```gherkin
+Étant donné : Le joueur a 3 cartes en main et 5 Échos du Néant disponibles
+           Et : Le joueur joue la faction Humains avec formation Phalange
+Quand : Le joueur clique sur une carte coûtant 3 Échos dans sa main
+Alors : La carte est mise en surbrillance (bordure brillante)
+    Et : 9 positions valides de la grille s'illuminent en vert (formation Phalange)
+    Et : L'event Socket 'game:card_selected' est émis avec cardId
+Quand : Le serveur répond avec 'game:valid_positions' contenant 9 positions
+    Et : Le joueur clique sur une position valide en surbrillance
+Alors : L'event Socket 'game:place_unit' est émis avec {cardId, position}
+    Et : La carte se déplace de la main vers la grille (animation fluide)
+    Et : Les Échos du Néant du joueur sont réduits de 3
+    Et : L'état de sélection est réinitialisé
+```
+
+#### **Scénario 2 : Tentative de Placement Invalide**
+```gherkin
+Étant donné : Le joueur a une carte sélectionnée avec positions valides affichées
+Quand : Le joueur clique sur une case NON mise en surbrillance (position invalide)
+Alors : Un feedback visuel d'erreur apparaît (animation de secousse rouge)
+    Et : Un message d'erreur s'affiche "Position de placement invalide"
+    Et : La carte reste sélectionnée avec les positions valides toujours affichées
+    Et : Aucun event Socket n'est émis
+```
+
+#### **Scénario 3 : Annulation de Sélection**
+```gherkin
+Étant donné : Le joueur a une carte sélectionnée
+Quand : Le joueur clique à nouveau sur la même carte
+Alors : Le feedback visuel de sélection disparaît (surbrillance retirée)
+    Et : Les positions valides ne sont plus affichées
+    Et : L'event Socket 'game:selection_cleared' est émis
+    Et : Le joueur peut sélectionner une autre carte
+```
+
+#### **Scénario 4 : Ressources Insuffisantes**
+```gherkin
+Étant donné : Le joueur a 2 Échos du Néant disponibles
+Quand : Le joueur tente de sélectionner une carte coûtant 5 Échos
+Alors : La carte affiche un feedback "ressources insuffisantes" (grisée + tooltip)
+    Et : Aucune sélection ne se produit
+    Et : Aucun event Socket n'est émis
+```
+
+#### **Scénario 5 : Changement de Sélection**
+```gherkin
+Étant donné : Le joueur a la Carte A sélectionnée avec positions valides affichées
+Quand : Le joueur clique sur une Carte B différente dans sa main
+Alors : La Carte A est désélectionnée (surbrillance retirée)
+    Et : La Carte B est sélectionnée (nouvelle surbrillance)
+    Et : Les nouvelles positions valides pour la Carte B s'affichent
+    Et : L'event Socket 'game:card_selected' est émis avec le nouveau cardId
+```
+
+---
+
 ### **Étape 1.2 : Placement d'Unités**
 
 #### Backend - WebSocket + Logique de Placement
@@ -114,12 +175,20 @@ tcg-tactique/
 ```bash
 @fullstack "Setup Socket.io dès maintenant avec events de base :
 - 'game:create' (créer partie)
-- 'game:place_unit' (placer unité) 
-- 'game:state_update' (sync état entre joueurs)
 - 'game:join' (rejoindre partie)
+- 'game:card_selected' (joueur sélectionne carte - étape 1)
+- 'game:valid_positions' (serveur envoie positions valides)
+- 'game:place_unit' (placer unité sur position validée - étape 2)
+- 'game:selection_cleared' (annuler sélection)
+- 'game:state_update' (sync état entre joueurs)
 GameRooms par partie, broadcasting aux 2 joueurs."
 
-@fullstack "Crée gameService.ts avec méthodes : createGame(), placeUnit(gameId, playerId, cardId, position), validatePlacement(). Intégration Socket events au lieu de REST."
+@fullstack "Crée gameService.ts avec méthodes :
+- createGame()
+- calculateValidPositions(faction, boardState) : retourne positions valides selon formation faction
+- placeUnit(gameId, playerId, cardId, position) : étape 2 après validation
+- validatePlacement() : vérifie coût, position, tour
+Intégration Socket events au lieu de REST."
 ```
 
 **Cartes de Test** :
@@ -127,18 +196,26 @@ GameRooms par partie, broadcasting aux 2 joueurs."
 @backend "Crée seed data avec 15 cartes simples : 5 Humains, 5 Aliens, 5 Robots. Stats basiques (2/2, 3/3, 1/4 etc), portée 1-2, coût 1-3 Échos."
 ```
 
-#### Frontend - Drag & Drop + Socket Integration
+#### Frontend - Click-Based Placement + Socket Integration
 **Agent** : `@frontend`
 
 ```bash
 @frontend "Setup Socket.io client avec useSocket hook React. Events :
-- Emit 'game:place_unit' lors drag & drop
+- Emit 'game:card_selected' lors clic sur carte (étape 1)
+- Listen 'game:valid_positions' pour afficher zones valides
+- Emit 'game:place_unit' lors clic sur position valide (étape 2)
+- Emit 'game:selection_cleared' pour annuler sélection
 - Listen 'game:state_update' pour synchronisation temps réel
 - Connection/disconnection handling basique"
 
-@frontend "Implémente drag & drop pour cartes. Main de cartes en bas, glisser vers grille. Validation visuelle (cases vertes/rouges). Socket events pour placement."
+@frontend "Implémente placement click-based pour cartes :
+- Clic sur carte dans main → carte sélectionnée (highlight visuel)
+- Affichage automatique des positions valides (cases vertes)
+- Clic sur position valide → placement carte (animation smooth)
+- Clic sur carte sélectionnée à nouveau → désélection
+- Feedback erreur pour positions invalides (shake + message)"
 
-@frontend "Ajoute Hand component affichant 7 cartes de test. Card component avec stats visibles. Feedback visuel lors drag & drop."
+@frontend "Ajoute Hand component affichant 7 cartes de test. Card component avec stats visibles. SelectionState management avec React hooks. Visual feedback pour états : normal, selected, disabled, hoverable."
 ```
 
 **Composants** :
@@ -156,7 +233,47 @@ GameRooms par partie, broadcasting aux 2 joueurs."
 - ✅ Pas de refactoring REST → WebSocket plus tard
 - ✅ Tests temps réel possibles dès cette étape
 
-**Test** : Glisser cartes de la main vers grille, voir unités placées **en temps réel**
+**Test** : Cliquer cartes dans main → voir zones valides → cliquer position → voir unités placées **en temps réel**
+
+---
+
+### **Tests de Placement Click-Based**
+
+#### Tests Unitaires
+**Agent** : `@test`
+
+```bash
+@test "Tests unitaires placement click-based :
+- Gestion de l'état de sélection de carte (selected, deselected, switch)
+- Calcul des positions valides par faction (Humains, Aliens, Robots)
+- Validation de placement (coût, position, tour du joueur)
+- Flux d'annulation de sélection (deselect, cancel)
+- Gestion des états d'erreur (ressources insuffisantes, position invalide)"
+```
+
+#### Tests d'Intégration Socket.io
+**Agent** : `@fullstack`
+
+```bash
+@fullstack "Tests d'intégration Socket.io :
+- Séquence d'events : card_selected → valid_positions → place_unit
+- Validation côté serveur des positions retournées
+- Synchronisation d'état entre les deux joueurs
+- Cas limites : déconnexion pendant sélection, sélection pendant tour adverse"
+```
+
+#### Tests E2E Interaction Utilisateur
+**Agent** : `@test`
+
+```bash
+@test "Tests E2E interaction click-based :
+- Clic carte → voir zones valides en vert → clic zone → placement confirmé
+- Clic carte → clic même carte → désélection complète
+- Clic carte A → clic carte B → changement de sélection
+- Tentative placement zone invalide → feedback erreur + maintien sélection
+- Clic carte sans ressources → carte grisée + tooltip erreur
+- Interaction mobile : tap-select, tap-place, cibles minimum 44x44px"
+```
 
 ---
 
@@ -190,7 +307,11 @@ Combat simultané : les 2 unités se font des dégâts."
 - Listen 'game:combat_result' pour animations
 - Listen 'game:state_update' pour sync post-combat"
 
-@frontend "Ajoute système de combat : clic sur unité → highlight portée possible → clic cible → emit attack. Animation combat basée sur Socket events."
+@frontend "Ajoute système de combat click-based :
+- Clic sur unité alliée → sélection + highlight portée possible
+- Clic sur cible ennemie dans portée → emit attack
+- Animation combat basée sur Socket events
+- Feedback visuel : unités attaquables en surbrillance, portée affichée"
 
 @frontend "Visual feedback : unités attaquables en vert, portée affichée au hover. Animation simple pour attaque (ligne rouge temporaire)."
 ```
@@ -248,13 +369,43 @@ Broadcasting automatique des changements de tour."
 **Agent** : `@frontend`
 
 ```bash
-@frontend "Améliore UX : 
+@frontend "Améliore UX :
 - Messages d'erreur clairs (pas assez d'Échos, placement invalide)
 - Animations smooth pour toutes actions
 - États loading pendant API calls
 - Design cohérent TailwindCSS"
 
 @frontend "Responsive design mobile/tablette en paysage. Tooltips pour cartes. States visuels (hoverable, selected, disabled)."
+```
+
+#### Gestion d'Erreurs et Cas Limites
+**Agent** : `@frontend` puis `@fullstack`
+
+```bash
+@frontend "Gestion d'erreurs click-based :
+
+1. Latence réseau sur 'game:valid_positions' :
+   - Timeout : 3 secondes maximum
+   - Comportement : Afficher indicateur de chargement sur carte sélectionnée
+   - Désactiver interaction grille pendant attente
+   - Récupération : Si timeout, afficher 'Problème de connexion - resélectionnez la carte'
+
+2. Sélection concurrente (edge case multijoueur) :
+   - Validation : Serveur vérifie ownership du tour avant 'game:card_selected'
+   - Réponse : Event 'game:error' avec message 'Ce n'est pas votre tour'
+   - Client : Auto-clear sélection, afficher notification temporaire
+
+3. Sélection pendant animation (carte en cours de placement) :
+   - Prévention : Désactiver interaction main pendant animation placement
+   - Durée : Verrouillage 300ms pendant animation
+   - Visuel : État loading sur cartes de la main"
+
+@fullstack "Tests edge cases système click-based :
+- Perte connexion pendant sélection active
+- Réception 'game:valid_positions' après timeout
+- Double-clic rapide sur carte (debouncing)
+- Changement tour pendant sélection en cours
+- État synchronisé après reconnexion"
 ```
 
 #### Integration & Debug

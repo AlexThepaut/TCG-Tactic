@@ -1,5 +1,10 @@
 # Card Layout Rework Session
 
+> **⚠️ HISTORICAL NOTE**: This session document references drag-and-drop features that were
+> later replaced by click-based card placement on 2025-01-20. References to "drag-and-drop"
+> or "React DnD" reflect the system in place at the time of this session but are no longer
+> part of the current implementation.
+
 **Date**: 2025-01-27
 **Session Type**: UI Component Refactoring
 **Status**: Complete

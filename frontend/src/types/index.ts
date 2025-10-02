@@ -198,25 +198,11 @@ export interface SocketUserData {
   connectedAt: Date;
 }
 
-// Drag & Drop Types
-export interface DragItem {
-  type: 'CARD';
-  id: string;
-  cardId: string;
-  handIndex: number;
-  card: GameCard;
-}
-
-export interface DropResult {
-  position: GamePosition;
-  isValid: boolean;
-  faction?: Faction;
-}
-
-export interface DragPreview {
-  card: GameCard;
-  isDragging: boolean;
-  canDrop: boolean;
+// Click-Based Selection Types (replacing drag & drop)
+export interface SelectionState {
+  selectedCard: GameCard | null;
+  validPositions: GamePosition[];
+  selectionMode: 'card' | 'target' | null;
 }
 
 // Formation definitions for each faction
