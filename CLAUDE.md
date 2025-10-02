@@ -161,6 +161,37 @@ All game interactions use Socket.io events instead of REST API:
 'matchmaking:cancel' // Leave queue
 ```
 
+### Git Workflow
+
+When starting work on a new task:
+
+1. **Create a feature branch** named after the task before beginning implementation
+   - Branch naming format: `task-[task-id]-[brief-description]` or `feature/[feature-name]`
+   - Examples:
+     - `task-1.3A-card-system-foundation`
+     - `feature/matchmaking-system`
+     - `fix/combat-calculation-bug`
+
+2. **Work on the branch** until the task is complete
+   - Make atomic commits with clear messages
+   - Follow conventional commit format when applicable
+
+3. **Commit at task completion** with a descriptive message
+   - Format: `type(scope): description`
+   - Examples:
+     - `feat(combat): implement faction passive abilities`
+     - `refactor(placement): migrate from drag-drop to click-based`
+     - `test(cards): add unit tests for card validation`
+     - `docs(readme): update setup instructions`
+
+4. **Create pull request** or merge when ready
+   - Ensure all tests pass
+   - Code review if working in a team
+   - Update documentation as needed
+
+This workflow ensures clean Git history and makes it easy to track changes by feature or task.
+
+
 ## Testing Strategy
 
 ### Key Testing Areas
