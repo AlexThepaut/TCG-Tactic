@@ -169,9 +169,9 @@ const HandDemo: React.FC = () => {
         cards={sampleCards}
         faction={faction}
         resources={resources}
-        onCardSelect={handleCardSelect}
-        onCardDragStart={handleCardDragStart}
-        onCardDragEnd={handleCardDragEnd}
+        selectedCardId={null}
+        isMyTurn={true}
+        onCardClick={(card, index) => handleCardSelect(card, index)}
       />
     </div>
   );

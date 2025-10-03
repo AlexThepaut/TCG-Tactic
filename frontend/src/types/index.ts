@@ -201,8 +201,20 @@ export interface SocketUserData {
 // Click-Based Selection Types (replacing drag & drop)
 export interface SelectionState {
   selectedCard: GameCard | null;
+  selectedHandIndex: number | null;
   validPositions: GamePosition[];
   selectionMode: 'card' | 'target' | null;
+}
+
+// Card Selection Response (for click-based placement)
+export interface CardSelectedData {
+  cardId: string;
+  handIndex: number;
+}
+
+export interface ValidPositionsResponse extends BasicResponse {
+  validPositions?: GamePosition[];
+  cardId?: string;
 }
 
 // Formation definitions for each faction
@@ -292,6 +304,7 @@ export interface ServerToClientEvents {
   'game:turn_changed': (currentPlayer: string, timeRemaining: number) => void;
   'game:game_over': (result: GameResult) => void;
   'game:error': (error: string) => void;
+  'game:valid_positions': (response: ValidPositionsResponse) => void;
 
   // Matchmaking Updates
   'matchmaking:queue_update': (position: number, estimatedWait: number) => void;
@@ -318,7 +331,9 @@ export interface ClientToServerEvents {
   'game:leave': (callback: (response: BasicResponse) => void) => void;
   'game:ready': (callback: (response: BasicResponse) => void) => void;
 
-  // Game Actions
+  // Game Actions - Card Selection (click-based placement)
+  'game:card_selected': (data: CardSelectedData, callback: (response: ValidPositionsResponse) => void) => void;
+  'game:selection_cleared': () => void;
   'game:place_unit': (data: PlaceUnitData, callback: (response: GameActionResponse) => void) => void;
   'game:attack': (data: AttackData, callback: (response: GameActionResponse) => void) => void;
   'game:cast_spell': (data: CastSpellData, callback: (response: GameActionResponse) => void) => void;

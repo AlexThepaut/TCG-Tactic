@@ -47,6 +47,7 @@ interface UseGameSocketReturn {
   isInGame: boolean;
   gameState: GameState | null;
   error: string | null;
+  socketService: any; // SocketService instance for direct access
 
   // Game management
   createGame: (config: GameCreateConfig) => Promise<GameResponse>;
@@ -604,6 +605,7 @@ const useGameSocket = (options: UseGameSocketOptions = {}): UseGameSocketReturn 
     isInGame,
     gameState,
     error: error || socketError,
+    socketService,
 
     // Game management
     createGame,

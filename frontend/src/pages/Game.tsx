@@ -1,11 +1,9 @@
-import { useCallback, useEffect } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import GameBoard from '@/components/game/GameBoard';
-import HearthstoneHand from '@/components/game/HearthstoneHand';
-import useGameSocket from '@/hooks/useGameSocket';
-import { useGameState, useGameLoading, useGameActions, useConnectionState, useGameStore } from '@/stores';
+import { GameSocketProvider, useGameSocketContext } from '@/contexts/GameSocketContext';
 import type { GameState, GameCard, Faction } from '@/types';
 
 // Mock game data for development/testing
@@ -69,7 +67,7 @@ const createMockGameState = (gameId: string): GameState => {
         id: 'player-1',
         username: 'Player 1',
         faction: 'humans',
-        hand: [mockCards[0]!, mockCards[3]!, mockCards[0]!, mockCards[3]!],
+        hand: [mockCards[0]!, mockCards[3]!, mockCards[0]!, mockCards[3]!, mockCards[1]!, mockCards[2]!, mockCards[0]!],
         board: Array(3).fill(null).map(() => Array(5).fill(null)),
         resources: 5,
         questId: 'quest-humans-1',
@@ -100,162 +98,51 @@ const createMockGameState = (gameId: string): GameState => {
   };
 };
 
-const Game = () => {
-  const navigate = useNavigate();
+/**
+ * GameContent - Inner component that consumes GameSocketContext
+ * Separated to allow wrapping with provider in parent
+ */
+const GameContent = () => {
   const { gameId } = useParams<{ gameId: string }>();
 
-  // Zustand store state
-  const gameState = useGameState();
-  const isLoading = useGameLoading();
-  const { isConnected } = useConnectionState();
-  const useMockData = useGameStore((state) => state.useMockData);
+  // Get all game state from context (single source of truth)
   const {
-    setGameState,
-    setLoading,
-    setUseMockData,
-    setConnectionState,
-    handleGameOver,
-    handlePlayerJoined,
-    handlePlayerLeft,
-    handleActionPerformed,
-    handleTurnChanged,
-    handleCombatResult,
-    setError,
-  } = useGameActions();
+    gameState,
+    isConnected,
+    error,
+  } = useGameSocketContext();
 
-  // Socket connection - pass gameId for testing mode user ID detection
-  const {
-    isConnected: socketConnected,
-    isAuthenticated,
-    isInGame,
-    gameState: socketGameState,
-    leaveGame,
-    error: socketError,
-  } = useGameSocket(
-    gameId && gameId !== 'test-game-123'
-      ? {
-          gameId,
-          autoJoinGame: true,
-          callbacks: {
-            onGameStateUpdate: (newState) => {
-              setGameState(newState);
-              setLoading(false);
-            },
-            onGameOver: (result) => {
-              handleGameOver(result);
-              toast.success(`Game Over! Winner: ${result.winner}`);
-              setTimeout(() => navigate('/'), 3000);
-            },
-            onGameError: (error) => {
-              setError(error);
-              toast.error(`Game Error: ${error}`);
-            },
-            onPlayerJoined: handlePlayerJoined,
-            onPlayerLeft: handlePlayerLeft,
-            onActionPerformed: handleActionPerformed,
-            onTurnChanged: handleTurnChanged,
-            onCombatResult: handleCombatResult,
-          },
-        }
-      : {
-          // Pass gameId even for testing mode to enable user ID detection
-          gameId: gameId || 'test-game-123',
-        }
-  );
+  const [isLoading, setIsLoading] = useState(true);
+  const [useMockData, setUseMockData] = useState(false);
+  const [mockGameState, setMockGameState] = useState<GameState | null>(null);
 
-  // Sync connection state with store
+  // Determine if we should use mock data
   useEffect(() => {
-    setConnectionState(socketConnected, isAuthenticated, isInGame);
-  }, [socketConnected, isAuthenticated, isInGame, setConnectionState]);
+    const shouldUseMock = !gameId || gameId === 'test-game-123' || !isConnected;
 
-  // Initialize game state
-  useEffect(() => {
-    if (socketGameState) {
-      setGameState(socketGameState);
-      setLoading(false);
-    } else if (!gameId || gameId === 'test-game-123' || !isConnected) {
-      // Use mock data for development/testing
+    if (shouldUseMock && !mockGameState) {
       const testGameId = gameId || 'test-game-123';
       console.log('Using mock data for development/testing', { gameId: testGameId, isConnected });
-      setGameState(createMockGameState(testGameId));
+      setMockGameState(createMockGameState(testGameId));
       setUseMockData(true);
-      setLoading(false);
     }
-  }, [socketGameState, gameId, isConnected, setGameState, setLoading, setUseMockData]);
+
+    // Clear loading once we have state (real or mock)
+    if (gameState || mockGameState) {
+      setIsLoading(false);
+    }
+  }, [gameId, isConnected, gameState, mockGameState]);
 
   // Handle socket errors
   useEffect(() => {
-    if (socketError) {
-      console.error('Socket error in Game:', socketError);
-      setError(socketError);
-      toast.error(`Connection Error: ${socketError}`);
+    if (error && !useMockData) {
+      console.error('Socket error in Game:', error);
+      toast.error(`Connection Error: ${error}`);
     }
-  }, [socketError, setError]);
+  }, [error, useMockData]);
 
-  // Handle game actions
-  const handleGameAction = useCallback((action: string, data: any) => {
-    console.log('Game action:', action, data);
-    // Additional action handling can be added here
-  }, []);
-
-  const handleTurnEnd = useCallback(() => {
-    console.log('Turn ended');
-    toast.success('Turn ended');
-  }, []);
-
-  const handleSurrender = useCallback(async () => {
-    if (useMockData) {
-      toast.error('Surrendered (mock mode)');
-      navigate('/');
-      return;
-    }
-
-    try {
-      await leaveGame();
-      navigate('/');
-    } catch (error) {
-      console.error('Failed to leave game:', error);
-      toast.error('Failed to leave game');
-    }
-  }, [useMockData, leaveGame, navigate]);
-
-  const handleExitGame = useCallback(async () => {
-    const confirmed = window.confirm('Are you sure you want to exit the game?');
-    if (!confirmed) return;
-
-    if (useMockData) {
-      navigate('/');
-      return;
-    }
-
-    try {
-      await leaveGame();
-      navigate('/');
-    } catch (error) {
-      console.error('Failed to exit game:', error);
-      navigate('/'); // Exit anyway
-    }
-  }, [useMockData, leaveGame, navigate]);
-
-  // Hand interaction handlers
-  const handleCardSelect = useCallback((card: GameCard, index: number) => {
-    console.log('Card selected from hand:', card.name, 'at index', index);
-    // TODO: Implement card selection logic
-    toast.info(`Selected: ${card.name}`);
-  }, []);
-
-  const handleCardDragStart = useCallback((card: GameCard, index: number) => {
-    console.log('Card drag started:', card.name, 'from index', index);
-    // TODO: Implement drag start logic (e.g., highlight valid drop zones)
-  }, []);
-
-  const handleCardDragEnd = useCallback((card: GameCard, index: number, didDrop: boolean) => {
-    console.log('Card drag ended:', card.name, 'dropped:', didDrop);
-    // TODO: Implement card play logic if dropped successfully
-    if (didDrop) {
-      toast.success(`Played: ${card.name}`);
-    }
-  }, []);
+  // Use mock data if in testing mode, otherwise use real game state
+  const activeGameState = useMockData ? mockGameState : gameState;
 
   // Loading state
   if (isLoading) {
@@ -302,8 +189,7 @@ const Game = () => {
   }
 
   // Error state
-  if (socketError && !useMockData) {
-    console.log("Error on socket and don't use mock");
+  if (error && !useMockData) {
     return (
       <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex items-center justify-center relative overflow-hidden">
         {/* Atmospheric effects */}
@@ -322,7 +208,7 @@ const Game = () => {
           </div>
 
           <div className="text-blood-300 mb-8 font-tech tracking-wide bg-gothic-darkest/60 border border-blood-600/30 p-4">
-            {socketError}
+            {error}
           </div>
 
           <Link
@@ -338,8 +224,7 @@ const Game = () => {
   }
 
   // No game state
-  if (!gameState) {
-    console.log("No game state")
+  if (!activeGameState) {
     return (
       <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex items-center justify-center relative overflow-hidden">
         {/* Atmospheric effects */}
@@ -373,7 +258,7 @@ const Game = () => {
     );
   }
 
-  console.log("Normal way")
+  // Main game board with active state
   return (
     <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex flex-col relative overflow-hidden">
       {/* Atmospheric background effects */}
@@ -384,33 +269,65 @@ const Game = () => {
         <div className="absolute top-0 right-0 w-px h-full bg-gradient-to-b from-transparent via-imperial-600 to-transparent"></div>
       </div>
 
-      {/* Connection Status */}
-      {!isConnected && !useMockData && (
-        <div className="absolute top-4 right-4 z-50 bg-blood-600/90 border border-blood-500/50 text-blood-100 px-6 py-3 backdrop-blur-sm font-tech font-bold tracking-wide shadow-lg shadow-blood-500/30">
-          <span className="gothic-text-shadow">⚠ CONNECTION LOST</span>
-        </div>
-      )}
-
-      {/* Game Board */}
+      {/* Game Board - now gets all state from context */}
       <GameBoard
-        gameState={gameState}
-        onGameAction={handleGameAction}
-        onTurnEnd={handleTurnEnd}
-        onSurrender={handleSurrender}
+        gameState={activeGameState}
+        useMockData={useMockData}
       />
-
-      {/* Player Hand */}
-      {gameState.players.player1 && (
-        <HearthstoneHand
-          cards={gameState.players.player1.hand}
-          faction={gameState.players.player1.faction}
-          resources={gameState.players.player1.resources}
-          onCardSelect={handleCardSelect}
-          onCardDragStart={handleCardDragStart}
-          onCardDragEnd={handleCardDragEnd}
-        />
-      )}
     </div>
+  );
+};
+
+/**
+ * Game Component - Wraps GameContent with GameSocketProvider
+ * This is the entry point that sets up the context
+ */
+const Game = () => {
+  const navigate = useNavigate();
+  const { gameId } = useParams<{ gameId: string }>();
+
+  // Determine if this is a real game or testing mode
+  const isTestMode = !gameId || gameId === 'test-game-123' || gameId.startsWith('test-');
+  const effectiveGameId = gameId || 'test-game-123';
+
+  // Callbacks for socket events
+  const handleGameOver = useCallback((result: any) => {
+    toast.success(`Game Over! Winner: ${result.winner}`);
+    setTimeout(() => navigate('/'), 3000);
+  }, [navigate]);
+
+  const handleGameError = useCallback((error: string) => {
+    toast.error(`Game Error: ${error}`);
+  }, []);
+
+  // Only provide socket connection for non-test modes
+  if (isTestMode) {
+    // For test mode, we still wrap with provider but it won't create a real connection
+    return (
+      <GameSocketProvider
+        gameId={effectiveGameId}
+        autoJoinGame={false}
+        callbacks={{
+          onGameError: handleGameError,
+        }}
+      >
+        <GameContent />
+      </GameSocketProvider>
+    );
+  }
+
+  // Real game mode - full socket connection
+  return (
+    <GameSocketProvider
+      gameId={effectiveGameId}
+      autoJoinGame={true}
+      callbacks={{
+        onGameOver: handleGameOver,
+        onGameError: handleGameError,
+      }}
+    >
+      <GameContent />
+    </GameSocketProvider>
   );
 };
 

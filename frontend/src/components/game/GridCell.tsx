@@ -1,8 +1,9 @@
 /**
  * GridCell Component - Interactive click-based grid cell for tactical placement
  * Handles faction formations, visual feedback, and click-based interactions
+ * Enhanced with mobile-friendly touch targets (44px minimum) and visual feedback
  */
-import React, { memo, useCallback } from 'react';
+import React, { memo, useCallback, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { clsx } from 'clsx';
 import {
@@ -37,9 +38,14 @@ const GridCell: React.FC<GridCellProps> = ({
   onClick,
   className
 }) => {
-  // Handle cell click
+  // Local state for click ripple effect
+  const [showRipple, setShowRipple] = useState(false);
+
+  // Handle cell click with ripple feedback
   const handleClick = useCallback(() => {
     if (onClick && (isValidPosition || isHighlighted)) {
+      setShowRipple(true);
+      setTimeout(() => setShowRipple(false), 600);
       onClick(position);
     }
   }, [onClick, position, isValidPosition, isHighlighted]);
@@ -216,7 +222,8 @@ const GridCell: React.FC<GridCellProps> = ({
       onClick={handleClick}
       className={clsx(
         "relative aspect-square border-2 rounded-lg transition-all duration-200",
-        "min-h-16 md:min-h-20 lg:min-h-24",
+        "min-h-[44px] min-w-[44px]", // Mobile-friendly touch target (44px minimum)
+        "md:min-h-20 lg:min-h-24",
         "backdrop-blur-sm",
         getCellStyling(),
         (isValidPosition || isHighlighted) && !card && "cursor-pointer hover:scale-105",
@@ -260,14 +267,37 @@ const GridCell: React.FC<GridCellProps> = ({
         {getPlacementIndicator()}
       </AnimatePresence>
 
-      {/* Highlight ring for valid placement positions */}
+      {/* Highlight ring for valid placement positions with pulsing animation */}
       {!card && isHighlighted && (
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          className="absolute inset-0 rounded-lg border-2 border-green-400 bg-green-500/20 pointer-events-none"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{
+            opacity: [0.6, 1, 0.6],
+            scale: [0.95, 1.02, 0.95]
+          }}
+          exit={{ opacity: 0, scale: 0.95 }}
+          transition={{
+            duration: 1.5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }}
+          className="absolute inset-0 rounded-lg border-4 border-green-400 bg-green-500/30 pointer-events-none shadow-lg shadow-green-500/50"
         />
+      )}
+
+      {/* Click ripple effect */}
+      {showRipple && (
+        <motion.div
+          initial={{ scale: 0, opacity: 0.8 }}
+          animate={{ scale: 2, opacity: 0 }}
+          transition={{ duration: 0.6, ease: "easeOut" }}
+          className="absolute inset-0 rounded-lg bg-green-400/50 pointer-events-none"
+        />
+      )}
+
+      {/* Subtle glow for valid positions when card is selected */}
+      {!card && isHighlighted && (
+        <div className="absolute inset-0 rounded-lg bg-gradient-radial from-green-400/20 via-green-500/10 to-transparent pointer-events-none animate-pulse" />
       )}
     </motion.div>
   );

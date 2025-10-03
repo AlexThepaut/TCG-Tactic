@@ -17,7 +17,9 @@ import type {
   PlaceUnitData,
   AttackData,
   CastSpellData,
-  MatchmakingJoinData
+  MatchmakingJoinData,
+  CardSelectedData,
+  ValidPositionsResponse
 } from '@/types';
 
 type SocketType = Socket<ServerToClientEvents, ClientToServerEvents>;
@@ -271,6 +273,24 @@ export class SocketService {
   /**
    * Game Action Methods
    */
+
+  /**
+   * Select a card (click-based placement Step 1)
+   * Returns valid placement positions for the selected card
+   */
+  async selectCard(data: CardSelectedData): Promise<ValidPositionsResponse> {
+    return this.emit('game:card_selected', data, (res: ValidPositionsResponse) => res);
+  }
+
+  /**
+   * Clear card selection (cancel placement)
+   */
+  clearSelection(): void {
+    if (this.socket && this.isConnected()) {
+      this.socket.emit('game:selection_cleared');
+    }
+  }
+
   async placeUnit(data: PlaceUnitData): Promise<GameActionResponse> {
     return this.emit('game:place_unit', data, (res: GameActionResponse) => res);
   }
@@ -328,6 +348,14 @@ export class SocketService {
       console.log('Socket connected:', this.socket?.id);
       this.connectionState.isConnected = true;
       this.connectionState.error = null;
+
+      // Trigger 'connection:established' handlers
+      const handlers = this.eventHandlers.get('connection:established');
+      if (handlers) {
+        handlers.forEach((handler) => {
+          (handler as any)(this.socket?.id || '');
+        });
+      }
     });
 
     this.socket.on('disconnect', (reason) => {

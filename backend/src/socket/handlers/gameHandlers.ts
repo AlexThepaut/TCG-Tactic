@@ -28,7 +28,9 @@ import {
   GameAction,
   GameResult,
   GameCard,
-  GamePosition
+  GamePosition,
+  CardSelectedData,
+  ValidPositionsResponse
 } from '../../types/socket';
 
 // Import new game state management services
@@ -173,7 +175,15 @@ export function setupGameHandlers(
     handleGameReady(socket, io, callback);
   });
 
-  // Game actions
+  // Game actions - Card selection (click-based placement)
+  socket.on('game:card_selected', (data, callback) => {
+    handleCardSelected(socket, io, data, callback);
+  });
+
+  socket.on('game:selection_cleared', () => {
+    handleSelectionCleared(socket, io);
+  });
+
   socket.on('game:place_unit', (data, callback) => {
     handlePlaceUnit(socket, io, data, callback);
   });
@@ -566,6 +576,155 @@ async function handleGameReady(
     callback({
       success: false,
       error: 'Failed to update ready status'
+    });
+  }
+}
+
+/**
+ * Handle card selection - Click-based placement Step 1
+ * Returns valid placement positions for the selected card
+ */
+async function handleCardSelected(
+  socket: AuthenticatedSocket,
+  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>,
+  data: CardSelectedData,
+  callback: (response: ValidPositionsResponse) => void
+): Promise<void> {
+  const startTime = performance.now();
+
+  try {
+    // Validate game permission
+    if (!socket.gameId || !validateGamePermission(socket, socket.gameId, 'place_unit')) {
+      return callback({
+        success: false,
+        error: 'Invalid game permission or not your turn'
+      });
+    }
+
+    const gameState = await gameStateService.getGameState(socket.gameId);
+    if (!gameState || gameState.status !== 'active') {
+      return callback({
+        success: false,
+        error: 'Game not active'
+      });
+    }
+
+    const userId = parseInt(socket.userData?.userId || '0');
+
+    // Get player state
+    const isPlayer1 = gameState.player1Id === userId;
+    const playerState = isPlayer1 ? gameState.players.player1 : gameState.players.player2;
+
+    // Validate card exists in hand
+    if (data.handIndex < 0 || data.handIndex >= playerState.hand.length) {
+      return callback({
+        success: false,
+        error: 'Invalid card index'
+      });
+    }
+
+    const selectedCard = playerState.hand[data.handIndex];
+    if (!selectedCard || selectedCard.id.toString() !== data.cardId) {
+      return callback({
+        success: false,
+        error: 'Card not found in hand'
+      });
+    }
+
+    // Validate player has sufficient resources
+    if (selectedCard.cost > playerState.resources) {
+      return callback({
+        success: false,
+        error: `Insufficient resources. Need ${selectedCard.cost}, have ${playerState.resources}`
+      });
+    }
+
+    // Get valid placement positions based on faction formation
+    const factionPositions = placementService.getValidPositions(playerState.faction);
+
+    // Filter out occupied positions on player's board
+    const board = isPlayer1 ? gameState.players.player1.board : gameState.players.player2.board;
+    const availablePositions = factionPositions.filter(pos => {
+      // Check if position is not occupied
+      const row = board[pos.row];
+      return !row || !row[pos.col];
+    });
+
+    if (availablePositions.length === 0) {
+      return callback({
+        success: false,
+        error: 'No valid placement positions available'
+      });
+    }
+
+    // Convert positions to Socket format
+    const validPositions: GamePosition[] = availablePositions.map((pos) => ({
+      x: pos.row,
+      y: pos.col
+    }));
+
+    const duration = performance.now() - startTime;
+
+    loggers.game.info('Card selection validated', {
+      gameId: socket.gameId,
+      userId,
+      cardId: data.cardId,
+      cardName: selectedCard.name,
+      validPositionCount: validPositions.length,
+      duration: `${duration.toFixed(2)}ms`
+    });
+
+    // Emit valid positions event to client
+    socket.emit('game:valid_positions', {
+      success: true,
+      validPositions,
+      cardId: data.cardId
+    });
+
+    callback({
+      success: true,
+      validPositions,
+      cardId: data.cardId
+    });
+
+  } catch (error: any) {
+    loggers.game.error('Card selection handler failed', {
+      socketId: socket.id,
+      userId: socket.userData?.userId || 'unknown',
+      gameId: socket.gameId,
+      data,
+      error: error.message,
+      stack: error.stack
+    });
+
+    callback({
+      success: false,
+      error: 'Failed to process card selection due to server error'
+    });
+  }
+}
+
+/**
+ * Handle selection cleared - Click-based placement cancellation
+ */
+async function handleSelectionCleared(
+  socket: AuthenticatedSocket,
+  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
+): Promise<void> {
+  try {
+    const userInfo = getUserInfo(socket);
+
+    loggers.game.debug('Card selection cleared', {
+      ...userInfo,
+      gameId: socket.gameId
+    });
+
+    // No server-side state to clear for selection
+    // This is mainly for logging and potential future state management
+  } catch (error: any) {
+    loggers.game.debug('Selection cleared handler error (non-critical)', {
+      socketId: socket.id,
+      error: error.message
     });
   }
 }

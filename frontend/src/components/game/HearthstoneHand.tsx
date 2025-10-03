@@ -3,7 +3,7 @@
  * Arc-positioned hand with multi-level hover states and responsive design
  * Features peek/raised/focused modes with natural card arrangement
  */
-import React, { memo, useState, useCallback, useMemo, useRef } from 'react';
+import React, { memo, useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useResponsiveLayout } from '@/hooks/useResponsiveLayout';
 import UnifiedCard from '@/components/shared/UnifiedCard';
@@ -42,10 +42,11 @@ interface CardInHandProps {
   handWidth: number;
   faction: Faction;
   resources: number;
+  isSelected: boolean;
+  isPlayable: boolean;
+  isMyTurn: boolean;
   onHover: (index: number | null) => void;
-  onSelect: (card: GameCard, index: number) => void;
-  onDragStart: (card: GameCard, index: number) => void;
-  onDragEnd: (card: GameCard, index: number, didDrop: boolean) => void;
+  onClick: (card: GameCard, index: number) => void;
 }
 
 const CardInHand: React.FC<CardInHandProps> = ({
@@ -57,10 +58,11 @@ const CardInHand: React.FC<CardInHandProps> = ({
   handWidth,
   faction,
   resources,
+  isSelected,
+  isPlayable,
+  isMyTurn,
   onHover,
-  onSelect,
-  onDragStart,
-  onDragEnd
+  onClick
 }) => {
   // Determine if this card is currently focused/hovered
   const isCardHovered = handState.hoveredCardIndex === index;
@@ -77,56 +79,200 @@ const CardInHand: React.FC<CardInHandProps> = ({
     return cardSize.height * 0.85; // Show only 15% of card in peek mode (much lower hand zone)
   }, [handState.mode, isCardHovered, cardSize.height]);
 
-  // Get scale based on hover state (including width expansion)
-  const getScale = useCallback(() => {
-    if (isCardHovered && handState.mode === 'focused') {
-      return { scaleX: 1.4, scaleY: 1.2 }; // Much wider and taller when focused for easier selection
+  // Faction-specific glow colors for selection animation
+  const FACTION_GLOW = useMemo(() => ({
+    humans: {
+      inner: 'rgba(98, 125, 152, 0.6)',
+      middle: 'rgba(98, 125, 152, 0.4)',
+      outer: 'rgba(98, 125, 152, 0.2)',
+    },
+    aliens: {
+      inner: 'rgba(109, 92, 255, 0.6)',
+      middle: 'rgba(109, 92, 255, 0.4)',
+      outer: 'rgba(109, 92, 255, 0.2)',
+    },
+    robots: {
+      inner: 'rgba(255, 87, 34, 0.6)',
+      middle: 'rgba(255, 87, 34, 0.4)',
+      outer: 'rgba(255, 87, 34, 0.2)',
     }
-    if (handState.mode === 'raised') {
-      return { scaleX: 1.1, scaleY: 1.05 }; // Slight expansion when hand is raised
+  }), []);
+
+  // Track selection timing for animation stages
+  const [justSelected, setJustSelected] = useState(false);
+
+  useEffect(() => {
+    if (isSelected) {
+      setJustSelected(true);
+      const timer = setTimeout(() => setJustSelected(false), 400);
+      return () => clearTimeout(timer);
+    } else {
+      setJustSelected(false);
+      return undefined;
     }
-    return { scaleX: 1, scaleY: 1 };
-  }, [isCardHovered, handState.mode]);
+  }, [isSelected]);
 
-  // Check if reduced motion is preferred (memoized to avoid repeated matchMedia calls)
-  const animationConfig = useMemo(() => {
-    const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // Check if reduced motion is preferred
+  const prefersReducedMotion = useMemo(() =>
+    window.matchMedia('(prefers-reduced-motion: reduce)').matches,
+    []
+  );
 
-    // Enhanced spring configuration for card spreading effect
+  // Enhanced animation variants with three-stage sequence
+  const getAnimationVariants = useCallback(() => {
+    const glowColors = FACTION_GLOW[faction];
+
+    // Simplified animations for reduced motion preference
+    if (prefersReducedMotion) {
+      return {
+        idle: {
+          scale: 1,
+          y: position.y + getYOffset(),
+          rotate: position.rotation,
+          boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        },
+        selected: {
+          scale: 1.2,
+          x: 0,
+          y: -100,
+          rotate: 0,
+          boxShadow: `0 0 30px ${glowColors.middle}`,
+          transition: { duration: 0.3, ease: 'easeOut' }
+        },
+        selectedIdle: {
+          scale: 1.2,
+          x: 0,
+          y: -100,
+          rotate: 0,
+          boxShadow: `0 0 30px ${glowColors.middle}`,
+        },
+        hover: {
+          scale: 1.1,
+          y: position.y + getYOffset(),
+          rotate: position.rotation,
+          boxShadow: `0 0 15px ${glowColors.outer}`,
+        }
+      };
+    }
+
+    // Full animations for standard preference
     return {
-      type: "spring" as const,
-      stiffness: prefersReducedMotion ? 500 : 400,  // Snappier for spread effect
-      damping: prefersReducedMotion ? 50 : 35,      // Smoother settling
-      mass: prefersReducedMotion ? 1.0 : 0.6,      // Lighter, more responsive
-      velocity: 0                                   // Clean start from rest
+      idle: {
+        scale: 1,
+        y: position.y + getYOffset(),
+        rotate: position.rotation,
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+      },
+
+      // On selection: move to center and elevate
+      selected: {
+        scale: [0.95, 1.4, 1.3],
+        x: [position.x, 0, 0],
+        y: [
+          position.y + getYOffset(),
+          -140,
+          -120
+        ],
+        rotate: [position.rotation, 0, 0],
+        boxShadow: [
+          '0 4px 6px rgba(0,0,0,0.1)',
+          `0 0 50px ${glowColors.middle}`,
+          `0 0 40px ${glowColors.middle}`
+        ],
+        transition: {
+          scale: {
+            times: [0, 0.7, 1],
+            duration: 0.4,
+            ease: [0.34, 1.56, 0.64, 1]
+          },
+          x: {
+            duration: 0.4,
+            type: "spring",
+            stiffness: 250,
+            damping: 30
+          },
+          y: {
+            times: [0, 0.7, 1],
+            duration: 0.4,
+            type: "spring",
+            stiffness: 280,
+            damping: 28
+          },
+          rotate: {
+            duration: 0.3
+          }
+        }
+      },
+
+      // Idle selected state at center with floating
+      selectedIdle: {
+        scale: 1.3,
+        x: 0,
+        y: [-120, -125, -120],
+        rotate: 0,
+        boxShadow: [
+          `0 0 30px ${glowColors.inner}, 0 0 50px ${glowColors.middle}`,
+          `0 0 40px ${glowColors.inner}, 0 0 70px ${glowColors.middle}`,
+          `0 0 30px ${glowColors.inner}, 0 0 50px ${glowColors.middle}`
+        ],
+        transition: {
+          y: {
+            duration: 2.5,
+            repeat: Infinity,
+            ease: "easeInOut"
+          },
+          boxShadow: {
+            duration: 2,
+            repeat: Infinity,
+            ease: "easeInOut"
+          }
+        }
+      },
+
+      // Hover states - stay in arc with subtle glow
+      hover: {
+        scale: 1.1,
+        y: position.y + getYOffset(),
+        rotate: position.rotation,
+        boxShadow: `0 0 15px ${glowColors.outer}`,
+        transition: { duration: 0.2 }
+      }
     };
-  }, []);
+  }, [isSelected, isCardHovered, handState.mode, position, getYOffset, FACTION_GLOW, faction, prefersReducedMotion]);
+
+  // Determine animation state
+  const getAnimationState = useCallback(() => {
+    if (!isSelected) {
+      if (isCardHovered || handState.mode === 'raised') return 'hover';
+      return 'idle';
+    }
+
+    if (justSelected) return 'selected';
+    return 'selectedIdle';
+  }, [isSelected, justSelected, isCardHovered, handState.mode]);
+
 
   return (
     <motion.div
-      className="absolute cursor-pointer select-none"
+      className="absolute select-none"
       style={{
         left: `${handWidth / 2 + position.x - cardSize.width / 2}px`,
-        zIndex: position.zIndex,
-        transformOrigin: 'bottom center'
-      }}
+        zIndex: isSelected ? 200 : position.zIndex,
+        transformOrigin: 'bottom center',
+        transform: 'translateZ(0)',
+        willChange: 'transform, opacity, box-shadow',
+        backfaceVisibility: 'hidden',
+        filter: 'none',
+        imageRendering: '-webkit-optimize-contrast',
+        WebkitFontSmoothing: 'antialiased'
+      } as React.CSSProperties}
       initial={{ y: 200, opacity: 0, rotate: 0 }}
       animate={{
-        y: position.y + getYOffset(),
+        ...getAnimationVariants()[getAnimationState()],
         opacity: 1,
-        rotate: position.rotation,
-        scaleX: getScale().scaleX,
-        scaleY: getScale().scaleY,
       }}
-      transition={animationConfig}
       onMouseEnter={() => onHover(index)}
       onMouseLeave={() => onHover(null)}
-      whileHover={{
-        y: position.y - 30,
-        scaleX: 1.4,
-        scaleY: 1.2,
-        transition: animationConfig
-      }}
     >
       <UnifiedCard
         card={card}
@@ -134,13 +280,12 @@ const CardInHand: React.FC<CardInHandProps> = ({
         handIndex={index}
         faction={faction}
         resources={resources}
-        isPlayable={true}
-        isSelected={isCardFocused}
-        showDetails={isCardHovered || isCardFocused}
-        onClick={(card) => onSelect(card, index)}
-        onDragStart={(card, handIndex) => onDragStart(card, handIndex ?? index)}
-        onDragEnd={(card, handIndex, didDrop) => onDragEnd(card, handIndex ?? index, didDrop ?? false)}
+        isPlayable={isPlayable && isMyTurn}
+        isSelected={isSelected}
+        showDetails={isCardHovered || isCardFocused || isSelected}
+        onClick={() => isPlayable && isMyTurn && onClick(card, index)}
         disableAnimations={true}
+        className={!isPlayable ? 'opacity-50 grayscale' : ''}
       />
     </motion.div>
   );
@@ -160,7 +305,10 @@ const MemoizedCardInHand = memo(CardInHand, (prevProps, nextProps) => {
     prevProps.position.zIndex === nextProps.position.zIndex &&
     prevProps.cardSize.width === nextProps.cardSize.width &&
     prevProps.cardSize.height === nextProps.cardSize.height &&
-    prevProps.handWidth === nextProps.handWidth
+    prevProps.handWidth === nextProps.handWidth &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.isPlayable === nextProps.isPlayable &&
+    prevProps.isMyTurn === nextProps.isMyTurn
   );
 });
 
@@ -168,18 +316,20 @@ export interface HearthstoneHandProps {
   cards: GameCard[];
   faction: Faction;
   resources: number;
-  onCardSelect?: (card: GameCard, index: number) => void;
-  onCardDragStart?: (card: GameCard, index: number) => void;
-  onCardDragEnd?: (card: GameCard, index: number, didDrop: boolean) => void;
+  selectedCardId?: string | null;
+  selectedHandIndex?: number | null;
+  isMyTurn?: boolean;
+  onCardClick?: (card: GameCard, index: number) => void;
 }
 
 const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
   cards,
   faction,
   resources,
-  onCardSelect,
-  onCardDragStart,
-  onCardDragEnd
+  selectedCardId = null,
+  selectedHandIndex = null,
+  isMyTurn = false,
+  onCardClick
 }) => {
   const layout = useResponsiveLayout();
   const handRef = useRef<HTMLDivElement>(null);
@@ -192,14 +342,35 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
     focusedIndex: null
   });
 
-  // Calculate responsive card size
+  // Calculate responsive card size with adaptive overlap
   const cardSize = useMemo(() => {
     const { cardSize: layoutCardSize } = layout;
     const availableWidth = layout.availableGameSpace.width * 0.85; // Use 85% of available space
 
-    // Calculate maximum card width that allows all cards to fit with overlap
-    const minOverlap = layout.isMobile ? 0.4 : 0.6; // Cards overlap by 40-60%
-    const maxCardWidth = availableWidth / (cards.length * minOverlap + (1 - minOverlap));
+    // Adaptive visible portion based on card count
+    // Note: This is the VISIBLE portion of each card after the first
+    // Lower value = more overlap (less visible)
+    // Increased overlap to fit within fixed arc angle
+    const getAdaptiveVisiblePortion = (cardCount: number, isMobile: boolean): number => {
+      if (cardCount <= 2) {
+        return isMobile ? 0.75 : 0.80;  // 20-25% overlap for 1-2 cards
+      } else if (cardCount <= 4) {
+        return isMobile ? 0.55 : 0.60;  // 40-45% overlap for 3-4 cards
+      } else if (cardCount <= 6) {
+        return isMobile ? 0.40 : 0.45;  // 55-60% overlap for 5-6 cards
+      } else if (cardCount <= 8) {
+        return isMobile ? 0.30 : 0.35;  // 65-70% overlap for 7-8 cards
+      } else {
+        return isMobile ? 0.20 : 0.25;  // 75-80% overlap for 9+ cards
+      }
+    };
+
+    const visiblePortion = getAdaptiveVisiblePortion(cards.length, layout.isMobile);
+
+    // Calculate maximum card width using original formula
+    // Formula: availableWidth = cardWidth * (n * visiblePortion + (1 - visiblePortion))
+    // Simplified: availableWidth = cardWidth * (1 + (n - 1) * visiblePortion)
+    const maxCardWidth = availableWidth / (cards.length * visiblePortion + (1 - visiblePortion));
 
     // Use responsive card size but cap it if too many cards
     const targetWidth = Math.min(layoutCardSize.width, maxCardWidth);
@@ -211,20 +382,21 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
     };
   }, [layout, cards.length]);
 
-  // Calculate arc configuration based on screen size and card count
+  // Calculate arc configuration with FIXED spread angle
   const arcConfig = useMemo((): ArcConfig => {
     const baseRadius = layout.availableGameSpace.width * (layout.isMobile ? 0.8 : 0.5);
-    const maxSpread = layout.isMobile ? 40 : 60; // Increased maximum spread angle
-    const minSpread = 15; // Minimum spread even for few cards
-    const actualSpread = Math.max(minSpread, Math.min(maxSpread, cards.length * 8)); // 8 degrees per card
+
+    // FIXED spread angle - stays constant regardless of card count
+    // Cards fit within this angle via overlap, not by widening the arc
+    const fixedSpread = layout.isMobile ? 25 : 35;
 
     return {
       radius: baseRadius,
-      spreadAngle: actualSpread,
+      spreadAngle: fixedSpread,
       baseOffset: layout.isMobile ? 20 : 30,
       cardTilt: 0.8 // More pronounced rotation
     };
-  }, [layout, cards.length]);
+  }, [layout.isMobile]);
 
   // Calculate arc positions for all cards with spread effect
   const cardPositions = useMemo((): CardPosition[] => {
@@ -299,18 +471,11 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
     }));
   }, []);
 
-  // Event handlers
-  const handleCardSelect = useCallback((card: GameCard, index: number) => {
-    onCardSelect?.(card, index);
-  }, [onCardSelect]);
-
-  const handleCardDragStart = useCallback((card: GameCard, index: number) => {
-    onCardDragStart?.(card, index);
-  }, [onCardDragStart]);
-
-  const handleCardDragEnd = useCallback((card: GameCard, index: number, didDrop: boolean) => {
-    onCardDragEnd?.(card, index, didDrop);
-  }, [onCardDragEnd]);
+  // Click handler for card selection
+  const handleCardClick = useCallback((card: GameCard, index: number) => {
+    if (!isMyTurn) return;
+    onCardClick?.(card, index);
+  }, [isMyTurn, onCardClick]);
 
   // Keyboard navigation
   const handleKeyDown = useCallback((e: React.KeyboardEvent) => {
@@ -337,7 +502,7 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
       case ' ':
         e.preventDefault();
         if (handState.focusedIndex !== null && cards[handState.focusedIndex]) {
-          onCardSelect?.(cards[handState.focusedIndex]!, handState.focusedIndex);
+          onCardClick?.(cards[handState.focusedIndex]!, handState.focusedIndex);
         }
         break;
       case 'Escape':
@@ -348,7 +513,7 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
         }));
         break;
     }
-  }, [cards, handState.focusedIndex, onCardSelect]);
+  }, [cards, handState.focusedIndex, onCardClick]);
 
   if (cards.length === 0) {
     return null;
@@ -413,23 +578,29 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
           }}
         >
           <AnimatePresence>
-            {cards.map((card, index) => (
-              <MemoizedCardInHand
-                key={`${card.id}-${index}`}
-                card={card}
-                index={index}
-                position={cardPositions[index]!}
-                handState={handState}
-                cardSize={cardSize}
-                handWidth={handWidth}
-                faction={faction}
-                resources={resources}
-                onHover={handleCardHover}
-                onSelect={handleCardSelect}
-                onDragStart={handleCardDragStart}
-                onDragEnd={handleCardDragEnd}
-              />
-            ))}
+            {cards.map((card, index) => {
+              const isCardSelected = selectedCardId === card.id && selectedHandIndex === index;
+              const canAfford = card.cost <= resources;
+
+              return (
+                <MemoizedCardInHand
+                  key={`${card.id}-${index}`}
+                  card={card}
+                  index={index}
+                  position={cardPositions[index]!}
+                  handState={handState}
+                  cardSize={cardSize}
+                  handWidth={handWidth}
+                  faction={faction}
+                  resources={resources}
+                  isSelected={isCardSelected}
+                  isPlayable={canAfford}
+                  isMyTurn={isMyTurn}
+                  onHover={handleCardHover}
+                  onClick={handleCardClick}
+                />
+              );
+            })}
           </AnimatePresence>
         </div>
       </div>

@@ -99,12 +99,14 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
   // Get animation variants
   const animationVariants = useMemo((): CardAnimationVariants => {
     if (disableAnimations) {
+      // Return completely empty variants to avoid creating any transform context
+      // This prevents double-layering when parent component controls all transforms
       return {
-        idle: { scale: 1, transition: { duration: 0 } },
-        hover: { scale: 1, transition: { duration: 0 } },
-        dragging: { scale: 1, transition: { duration: 0 } },
-        selected: { scale: 1, transition: { duration: 0 } },
-        disabled: { scale: 1, transition: { duration: 0 } }
+        idle: {},
+        hover: {},
+        dragging: {},
+        selected: {},
+        disabled: {}
       };
     }
 
@@ -124,12 +126,12 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       variants={animationVariants}
       initial="idle"
       animate={getCurrentVariant()}
-      whileHover={canPlay && !disableAnimations ? "hover" : "idle"}
+      whileHover={canPlay && !disableAnimations ? "hover" : undefined}
       onClick={handleCardClick}
-      whileTap={canPlay && !disableAnimations ? { scale: 0.95 } : {}}
+      whileTap={canPlay && !disableAnimations ? { scale: 0.95 } : undefined}
       className={clsx(
         // Base card structure with classic TCG proportions
-        "relative rounded-lg select-none touch-manipulation backdrop-blur-sm",
+        "relative rounded-lg select-none touch-manipulation",
         "transform-gpu", // Enable hardware acceleration
 
         // Size classes
@@ -141,14 +143,17 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
         factionStyles.glow,
 
         // Interaction states - enhanced hover glow and click-based selection
-        canPlay ? "hover:shadow-xl transition-all duration-300 cursor-pointer" : "opacity-60 cursor-not-allowed",
+        // Only apply hover effects when animations are enabled (not in hand context)
+        !disableAnimations && canPlay && "hover:shadow-xl",
+        !disableAnimations && "transition-all duration-300",
+        canPlay ? "cursor-pointer" : "cursor-not-allowed",
+        !canPlay && "opacity-60",
         // Add transitions for smooth glow effects
         "transition-shadow duration-500 ease-in-out",
         isSelected && "ring-4 ring-blue-500 ring-offset-2 scale-105",
 
         // Gothic theme effects
         "scanlines",
-        "backdrop-blur-sm",
 
         // Custom className
         className
@@ -227,7 +232,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
           <div className="absolute bottom-2 left-0 right-0 flex justify-between items-center px-2">
             {/* Attack - Bottom Left */}
             <div className={clsx(
-              "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
+              "flex items-center text-xs md:text-sm bg-black/40 rounded px-1.5 py-0.5",
   "gothic-text-shadow"
             )}>
               <BoltIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", "text-orange-400")} />
@@ -239,7 +244,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             {/* Range - Center Bottom */}
             {card.range !== undefined && (
               <div className={clsx(
-                "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
+                "flex items-center text-xs md:text-sm bg-black/40 rounded px-1.5 py-0.5",
     "gothic-text-shadow"
               )}>
                 <span className="font-semibold text-blue-300 mr-1">R</span>
@@ -251,7 +256,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
 
             {/* Health - Bottom Right */}
             <div className={clsx(
-              "flex items-center text-xs md:text-sm bg-black/40 backdrop-blur-sm rounded px-1.5 py-0.5",
+              "flex items-center text-xs md:text-sm bg-black/40 rounded px-1.5 py-0.5",
   "gothic-text-shadow"
             )}>
               <HeartIcon className={clsx("w-3 h-3 md:w-4 md:h-4 mr-1", "text-red-400")} />
@@ -277,7 +282,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
       <div className="absolute top-1 right-1">
         <div className={clsx(
           "px-1.5 py-0.5 rounded text-xs font-medium uppercase tracking-wide",
-          "bg-black/20 backdrop-blur-sm text-white",
+          "bg-black/20 text-white",
           contextConfig.theme?.gothic?.textShadow && "gothic-text-shadow"
         )}>
           {card.type}
@@ -291,7 +296,7 @@ const UnifiedCard: React.FC<UnifiedCardProps> = ({
             initial={{ opacity: 0, scale: 0.8 }}
             animate={{ opacity: 1, scale: 1 }}
             exit={{ opacity: 0, scale: 0.8 }}
-            className="absolute inset-0 rounded-lg border-4 border-blue-400 bg-blue-500/10 backdrop-blur-sm pointer-events-none"
+            className="absolute inset-0 rounded-lg border-4 border-blue-400 bg-blue-500/10 pointer-events-none"
           />
         )}
       </AnimatePresence>

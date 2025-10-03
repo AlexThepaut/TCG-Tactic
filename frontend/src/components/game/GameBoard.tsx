@@ -1,6 +1,6 @@
 /**
  * GameBoard Component - Click-based card placement interface
- * Implements two-step interaction: select card → click position
+ * Simplified to pure UI orchestration - all state comes from GameSocketContext
  */
 import React, { memo, useCallback, useState } from 'react';
 import { clsx } from 'clsx';
@@ -8,65 +8,74 @@ import {
   ClockIcon,
   CogIcon,
 } from '@heroicons/react/24/outline';
-import useGameSocket from '@/hooks/useGameSocket';
+import { useGameSocketContext } from '@/contexts/GameSocketContext';
 import { formatFactionName } from '@/utils/factionThemes';
 import PlayerPanel from './PlayerPanel';
 import TacticalGrid from './TacticalGrid';
-import type { GameState, SelectionState, GameCard, GamePosition } from '@/types';
+import HearthstoneHand from './HearthstoneHand';
+import type { GameState, GamePosition, GameCard, SelectionState, Faction } from '@/types';
+
+// Import formations for calculating valid positions in mock mode
+const FORMATIONS_DATA: Record<Faction, GamePosition[]> = {
+  humans: [
+    { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 },
+    { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 },
+    { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }
+  ],
+  aliens: [
+    { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 },
+    { x: 0, y: 1 }, { x: 1, y: 1 }, { x: 2, y: 1 }, { x: 3, y: 1 }, { x: 4, y: 1 },
+    { x: 2, y: 2 }
+  ],
+  robots: [
+    { x: 0, y: 0 }, { x: 1, y: 0 }, { x: 2, y: 0 }, { x: 3, y: 0 }, { x: 4, y: 0 },
+    { x: 2, y: 1 },
+    { x: 1, y: 2 }, { x: 2, y: 2 }, { x: 3, y: 2 }
+  ]
+};
 
 export interface GameBoardProps {
   gameState: GameState;
-  onGameAction?: (action: string, data: any) => void;
-  onTurnEnd?: () => void;
-  onSurrender?: () => void;
+  useMockData?: boolean;
 }
 
 const GameBoard: React.FC<GameBoardProps> = ({
   gameState,
-  onGameAction,
-  onTurnEnd,
-  onSurrender
+  useMockData = false
 }) => {
-  // Socket integration for real-time game state
+  // Get all socket state and actions from context (single source of truth)
   const {
     isConnected,
-    endTurn,
-    surrender,
     getCurrentPlayer,
     getOpponent,
     isMyTurn,
-    getTimeRemaining
-  } = useGameSocket({
-    gameId: gameState.id,
-    callbacks: {
-      onGameStateUpdate: (newState) => {
-        console.log('Game board received state update:', newState);
-      },
-      onTurnChanged: (currentPlayer, timeRemaining) => {
-        console.log('Turn changed:', currentPlayer, timeRemaining);
-      },
-      onGameError: (error) => {
-        console.error('Game error:', error);
-      }
-    }
-  });
+    getTimeRemaining,
+    endTurn,
+    surrender,
+    selectionState,
+    selectCard,
+    placeCard,
+    isSelectionLoading,
+  } = useGameSocketContext();
 
-  // Local state for UI interactions
+  // Local UI state only (not game state)
   const [isProcessingAction, setIsProcessingAction] = useState(false);
   const [showSurrenderConfirm, setShowSurrenderConfirm] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Selection state for click-based card placement
-  const [selectionState, setSelectionState] = useState<SelectionState>({
+  // Mock mode selection state (for testing without backend)
+  const [mockSelectionState, setMockSelectionState] = useState<SelectionState>({
     selectedCard: null,
+    selectedHandIndex: null,
     validPositions: [],
     selectionMode: null
   });
 
-  // Player data - use socket data with fallback to gameState
+  // Player data - use context methods with fallback to gameState for mock mode
   const currentPlayer = getCurrentPlayer() || gameState.players.player1;
   const opponent = getOpponent() || gameState.players.player2;
-  const myTurn = isMyTurn() || gameState.currentPlayer === 'player-1';
-  const timeRemaining = getTimeRemaining() || gameState.timeRemaining;
+  const myTurn = useMockData ? gameState.currentPlayer === 'player-1' : isMyTurn();
+  const timeRemaining = useMockData ? gameState.timeRemaining : getTimeRemaining();
 
   // Format time display (MM:SS)
   const formatTime = useCallback((seconds: number) => {
@@ -84,25 +93,23 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
   // Handle turn end
   const handleEndTurn = useCallback(async () => {
-    if (!myTurn || isProcessingAction) return;
+    if (!myTurn || isProcessingAction || useMockData) return;
 
     setIsProcessingAction(true);
     try {
-      const response = await endTurn();
-      if (response.success) {
-        onTurnEnd?.();
-        onGameAction?.('turn_ended', { playerId: currentPlayer.id });
-      }
+      await endTurn();
     } catch (error) {
       console.error('Failed to end turn:', error);
+      setErrorMessage('Failed to end turn');
+      setTimeout(() => setErrorMessage(null), 3000);
     } finally {
       setIsProcessingAction(false);
     }
-  }, [myTurn, isProcessingAction, endTurn, onTurnEnd, onGameAction, currentPlayer.id]);
+  }, [myTurn, isProcessingAction, useMockData, endTurn]);
 
   // Handle surrender
   const handleSurrender = useCallback(async () => {
-    if (isProcessingAction) return;
+    if (isProcessingAction || useMockData) return;
 
     if (!showSurrenderConfirm) {
       setShowSurrenderConfirm(true);
@@ -111,18 +118,16 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
     setIsProcessingAction(true);
     try {
-      const response = await surrender();
-      if (response.success) {
-        onSurrender?.();
-        onGameAction?.('surrendered', { playerId: currentPlayer.id });
-      }
+      await surrender();
     } catch (error) {
       console.error('Failed to surrender:', error);
+      setErrorMessage('Failed to surrender');
+      setTimeout(() => setErrorMessage(null), 3000);
     } finally {
       setIsProcessingAction(false);
       setShowSurrenderConfirm(false);
     }
-  }, [isProcessingAction, showSurrenderConfirm, surrender, onSurrender, onGameAction, currentPlayer.id]);
+  }, [isProcessingAction, useMockData, showSurrenderConfirm, surrender]);
 
   // Handle settings
   const handleSettings = useCallback(() => {
@@ -135,60 +140,132 @@ const GameBoard: React.FC<GameBoardProps> = ({
     setShowSurrenderConfirm(false);
   }, []);
 
-  // Handle card selection (Step 1 of two-step placement)
-  // TODO: This will be connected to the Hand component once it's integrated
-  const handleCardClick = useCallback((card: GameCard) => {
-    if (!myTurn || isProcessingAction) return;
+  // Calculate valid positions for mock mode
+  const getValidPositionsForMockMode = useCallback((faction: Faction, board: (GameCard | null)[][]) => {
+    // Get faction formation positions
+    const formationPositions = FORMATIONS_DATA[faction] || [];
 
-    // If clicking the same card, deselect it
-    if (selectionState.selectedCard?.id === card.id) {
-      setSelectionState({
+    // Filter out occupied positions
+    const validPositions = formationPositions.filter(pos => {
+      // Check if position is within board bounds
+      if (pos.x < 0 || pos.x >= 5 || pos.y < 0 || pos.y >= 3) return false;
+
+      // Check if position is not occupied (board is [row][col], position is {x: col, y: row})
+      const row = board[pos.y];
+      return row && !row[pos.x];
+    });
+
+    return validPositions;
+  }, []);
+
+  // Handle card selection (Step 1 of two-step placement)
+  const handleCardClick = useCallback(async (card: GameCard, index: number) => {
+    // Mock mode: Handle locally without socket
+    if (useMockData) {
+      if (!myTurn) return;
+
+      // Check if clicking the same card (deselect)
+      if (mockSelectionState.selectedCard?.id === card.id && mockSelectionState.selectedHandIndex === index) {
+        console.log('Deselecting card in mock mode:', card.name);
+        setMockSelectionState({
+          selectedCard: null,
+          selectedHandIndex: null,
+          validPositions: [],
+          selectionMode: null
+        });
+        return;
+      }
+
+      // Check if player can afford the card
+      if (card.cost > currentPlayer.resources) {
+        setErrorMessage(`Insufficient resources. Need ${card.cost}, have ${currentPlayer.resources}`);
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
+      }
+
+      // Calculate valid positions based on faction
+      const validPositions = getValidPositionsForMockMode(currentPlayer.faction, currentPlayer.board);
+
+      if (validPositions.length === 0) {
+        setErrorMessage('No valid placement positions available');
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
+      }
+
+      console.log('Card selected in mock mode:', card.name, 'at index', index, 'Valid positions:', validPositions.length);
+
+      // Update mock selection state
+      setMockSelectionState({
+        selectedCard: card,
+        selectedHandIndex: index,
+        validPositions,
+        selectionMode: 'target'
+      });
+
+      return;
+    }
+
+    // Real mode: Use socket
+    if (!myTurn || isSelectionLoading) return;
+
+    try {
+      await selectCard(card, index);
+    } catch (error) {
+      console.error('Failed to select card:', error);
+      setErrorMessage('Failed to select card');
+      setTimeout(() => setErrorMessage(null), 3000);
+    }
+  }, [useMockData, myTurn, isSelectionLoading, selectCard, mockSelectionState, currentPlayer, getValidPositionsForMockMode]);
+
+  // Handle cell click for placement (Step 2 of two-step placement)
+  const handleCellClick = useCallback(async (position: GamePosition) => {
+    // Mock mode: Handle locally without socket
+    if (useMockData) {
+      if (!mockSelectionState.selectedCard || !myTurn || isProcessingAction) return;
+
+      // Validate position is in valid positions
+      const isValid = mockSelectionState.validPositions.some(
+        pos => pos.x === position.x && pos.y === position.y
+      );
+
+      if (!isValid) {
+        setErrorMessage('Invalid placement position');
+        setTimeout(() => setErrorMessage(null), 3000);
+        return;
+      }
+
+      console.log('Mock placement:', mockSelectionState.selectedCard.name, 'at', position);
+
+      // In mock mode, just clear selection to show it worked
+      // In a real implementation, we would update the gameState.players.player1.board
+      setMockSelectionState({
         selectedCard: null,
+        selectedHandIndex: null,
         validPositions: [],
         selectionMode: null
       });
+
+      // Show success message
+      setErrorMessage(`✅ Card placed successfully (mock mode)`);
+      setTimeout(() => setErrorMessage(null), 2000);
+
       return;
     }
 
-    // TODO: Call backend to get valid positions for this card
-    // For now, using faction formation positions as valid positions
-    const validPositions: GamePosition[] = []; // Will be populated by backend
-
-    setSelectionState({
-      selectedCard: card,
-      validPositions,
-      selectionMode: 'target'
-    });
-  }, [myTurn, isProcessingAction, selectionState.selectedCard]);
-
-  // Suppress unused warning - this will be used when Hand component is integrated
-  void handleCardClick;
-
-  // Handle cell click for placement (Step 2 of two-step placement)
-  const handleCellClick = useCallback((position: GamePosition) => {
+    // Real mode: Use socket
     if (!selectionState.selectedCard || !myTurn || isProcessingAction) return;
 
-    // Validate position is in valid positions
-    const isValidPosition = selectionState.validPositions.some(
-      pos => pos.x === position.x && pos.y === position.y
-    );
-
-    if (!isValidPosition) {
-      // TODO: Show error feedback
-      console.error('Invalid placement position');
-      return;
+    setIsProcessingAction(true);
+    try {
+      await placeCard(position);
+    } catch (error) {
+      console.error('Failed to place card:', error);
+      setErrorMessage('Failed to place card');
+      setTimeout(() => setErrorMessage(null), 3000);
+    } finally {
+      setIsProcessingAction(false);
     }
-
-    // TODO: Emit placement to backend via socket
-    console.log('Placing card:', selectionState.selectedCard.id, 'at position:', position);
-
-    // Clear selection after successful placement
-    setSelectionState({
-      selectedCard: null,
-      validPositions: [],
-      selectionMode: null
-    });
-  }, [selectionState, myTurn, isProcessingAction]);
+  }, [useMockData, mockSelectionState, selectionState.selectedCard, myTurn, isProcessingAction, placeCard]);
 
   return (
     <div className="h-full flex flex-col bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest relative">
@@ -250,22 +327,22 @@ const GameBoard: React.FC<GameBoardProps> = ({
           <div className="flex-shrink-0">
             <button
               onClick={handleEndTurn}
-              disabled={!myTurn || isProcessingAction}
+              disabled={!myTurn || isProcessingAction || useMockData}
               className={clsx(
                 'px-6 py-3 border font-gothic font-bold text-base transition-all duration-300 relative group overflow-hidden',
-                myTurn && !isProcessingAction
+                myTurn && !isProcessingAction && !useMockData
                   ? 'bg-imperial-600/80 hover:bg-imperial-500 text-imperial-100 border-imperial-400/50 hover:box-glow-imperial transform hover:scale-105'
                   : 'bg-gothic-darker/60 text-void-500 border-void-700/30 cursor-not-allowed opacity-50'
               )}
             >
               <div className={clsx(
                 'absolute inset-0 bg-gradient-to-br opacity-0 group-hover:opacity-100 transition-opacity',
-                myTurn && !isProcessingAction && 'from-imperial-900/20 to-imperial-700/10'
+                myTurn && !isProcessingAction && !useMockData && 'from-imperial-900/20 to-imperial-700/10'
               )}></div>
               <span className="relative z-10 gothic-text-shadow tracking-wider">
                 {isProcessingAction ? 'PROCESSING...' : 'END TURN'}
               </span>
-              {myTurn && !isProcessingAction && (
+              {myTurn && !isProcessingAction && !useMockData && (
                 <>
                   <div className="absolute top-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
                   <div className="absolute bottom-0 left-0 w-full h-px bg-gradient-to-r from-transparent via-imperial-500 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
@@ -276,8 +353,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
 
           {/* Right Section: Action Buttons + Connection Status */}
           <div className="flex items-center space-x-4">
-            {/* Connection Status - Discreet */}
-            {!isConnected && (
+            {/* Connection Status - Only show if not connected and not in mock mode */}
+            {!isConnected && !useMockData && (
               <div className="bg-blood-600/80 border border-blood-500/50 px-3 py-2 backdrop-blur-sm">
                 <div className="flex items-center text-xs font-tech tracking-wide">
                   <div className="w-2 h-2 bg-blood-400 rounded-full mr-2 animate-pulse" />
@@ -290,7 +367,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <div className="relative">
               <button
                 onClick={handleSurrender}
-                disabled={isProcessingAction}
+                disabled={isProcessingAction || useMockData}
                 className={clsx(
                   'px-4 py-2 border font-gothic font-bold transition-all duration-300 relative group overflow-hidden',
                   showSurrenderConfirm
@@ -368,7 +445,7 @@ const GameBoard: React.FC<GameBoardProps> = ({
                 board={currentPlayer.board}
                 faction={currentPlayer.faction}
                 interactive={myTurn}
-                highlightedCells={selectionState.validPositions}
+                highlightedCells={useMockData ? mockSelectionState.validPositions : selectionState.validPositions}
                 onCellClick={handleCellClick}
                 faceToFace={true}
                 className="transform-gpu"
@@ -407,6 +484,35 @@ const GameBoard: React.FC<GameBoardProps> = ({
           />
         </div>
       </div>
+
+      {/* Error Notification */}
+      {errorMessage && (
+        <div className="fixed bottom-24 left-1/2 transform -translate-x-1/2 z-60 pointer-events-none">
+          <div className="bg-blood-700/95 border-2 border-blood-500/50 px-6 py-3 backdrop-blur-sm shadow-xl">
+            <div className="flex items-center space-x-3">
+              <div className="w-2 h-2 bg-blood-400 rounded-full animate-pulse" />
+              <span className="text-blood-100 font-gothic font-bold tracking-wide gothic-text-shadow">
+                {errorMessage}
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* HearthstoneHand Component */}
+      <HearthstoneHand
+        cards={currentPlayer.hand}
+        faction={currentPlayer.faction}
+        resources={currentPlayer.resources}
+        selectedCardId={useMockData
+          ? (mockSelectionState.selectedCard?.id ?? null)
+          : (selectionState.selectedCard?.id ?? null)}
+        selectedHandIndex={useMockData
+          ? (mockSelectionState.selectedHandIndex ?? null)
+          : (selectionState.selectedHandIndex ?? null)}
+        isMyTurn={myTurn}
+        onCardClick={handleCardClick}
+      />
     </div>
   );
 };
