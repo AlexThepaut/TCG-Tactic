@@ -131,21 +131,6 @@ const CardInHand: React.FC<CardInHandProps> = ({
           rotate: position.rotation,
           boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
         },
-        selected: {
-          scale: 1.2,
-          x: 0,
-          y: -100,
-          rotate: 0,
-          boxShadow: `0 0 30px ${glowColors.middle}`,
-          transition: { duration: 0.3, ease: 'easeOut' }
-        },
-        selectedIdle: {
-          scale: 1.2,
-          x: 0,
-          y: -100,
-          rotate: 0,
-          boxShadow: `0 0 30px ${glowColors.middle}`,
-        },
         hover: {
           scale: 1.1,
           y: position.y + getYOffset(),
@@ -164,71 +149,6 @@ const CardInHand: React.FC<CardInHandProps> = ({
         boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
       },
 
-      // On selection: move to center and elevate
-      selected: {
-        scale: [0.95, 1.4, 1.3],
-        x: [position.x, 0, 0],
-        y: [
-          position.y + getYOffset(),
-          -140,
-          -120
-        ],
-        rotate: [position.rotation, 0, 0],
-        boxShadow: [
-          '0 4px 6px rgba(0,0,0,0.1)',
-          `0 0 50px ${glowColors.middle}`,
-          `0 0 40px ${glowColors.middle}`
-        ],
-        transition: {
-          scale: {
-            times: [0, 0.7, 1],
-            duration: 0.4,
-            ease: [0.34, 1.56, 0.64, 1]
-          },
-          x: {
-            duration: 0.4,
-            type: "spring",
-            stiffness: 250,
-            damping: 30
-          },
-          y: {
-            times: [0, 0.7, 1],
-            duration: 0.4,
-            type: "spring",
-            stiffness: 280,
-            damping: 28
-          },
-          rotate: {
-            duration: 0.3
-          }
-        }
-      },
-
-      // Idle selected state at center with floating
-      selectedIdle: {
-        scale: 1.3,
-        x: 0,
-        y: [-120, -125, -120],
-        rotate: 0,
-        boxShadow: [
-          `0 0 30px ${glowColors.inner}, 0 0 50px ${glowColors.middle}`,
-          `0 0 40px ${glowColors.inner}, 0 0 70px ${glowColors.middle}`,
-          `0 0 30px ${glowColors.inner}, 0 0 50px ${glowColors.middle}`
-        ],
-        transition: {
-          y: {
-            duration: 2.5,
-            repeat: Infinity,
-            ease: "easeInOut"
-          },
-          boxShadow: {
-            duration: 2,
-            repeat: Infinity,
-            ease: "easeInOut"
-          }
-        }
-      },
-
       // Hover states - stay in arc with subtle glow
       hover: {
         scale: 1.1,
@@ -238,18 +158,14 @@ const CardInHand: React.FC<CardInHandProps> = ({
         transition: { duration: 0.2 }
       }
     };
-  }, [isSelected, isCardHovered, handState.mode, position, getYOffset, FACTION_GLOW, faction, prefersReducedMotion]);
+  }, [isCardHovered, handState.mode, position, getYOffset, FACTION_GLOW, faction, prefersReducedMotion]);
 
   // Determine animation state
   const getAnimationState = useCallback(() => {
-    if (!isSelected) {
-      if (isCardHovered || handState.mode === 'raised') return 'hover';
-      return 'idle';
-    }
-
-    if (justSelected) return 'selected';
-    return 'selectedIdle';
-  }, [isSelected, justSelected, isCardHovered, handState.mode]);
+    // Selection styling moved to CardPreview - cards in hand have no selection state
+    if (isCardHovered || handState.mode === 'raised') return 'hover';
+    return 'idle';
+  }, [isCardHovered, handState.mode]);
 
 
   return (
@@ -552,7 +468,7 @@ const HearthstoneHand: React.FC<HearthstoneHandProps> = ({
   });
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-50 pointer-events-none">
+    <div className="relative w-full h-full pointer-events-none">
       <div
         ref={handRef}
         className="relative mx-auto pointer-events-auto"

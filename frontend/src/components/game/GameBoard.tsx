@@ -13,6 +13,7 @@ import { formatFactionName } from '@/utils/factionThemes';
 import PlayerPanel from './PlayerPanel';
 import TacticalGrid from './TacticalGrid';
 import HearthstoneHand from './HearthstoneHand';
+import CardPreview from './CardPreview';
 import type { GameState, GamePosition, GameCard, SelectionState, Faction } from '@/types';
 
 // Import formations for calculating valid positions in mock mode
@@ -428,8 +429,8 @@ const GameBoard: React.FC<GameBoardProps> = ({
           />
         </div>
 
-        {/* Main Game Area - Centered Battlefield */}
-        <main className="flex-1 items-center justify-center min-w-0 p-4 relative">
+        {/* Main Game Area - Battlefield with Previews and Hand */}
+        <main className="flex-1 flex flex-col min-w-0 p-4 relative">
           {/* Battlefield atmospheric effects */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-1/3 left-1/4 w-2 h-2 bg-imperial-500 rounded-full animate-ember"></div>
@@ -437,40 +438,78 @@ const GameBoard: React.FC<GameBoardProps> = ({
             <div className="absolute top-2/3 left-2/3 w-1.5 h-1.5 bg-aliens-500 rounded-full animate-ember" style={{ animationDelay: '2s' }}></div>
           </div>
 
-          <div className="flex items-center justify-center w-full relative z-10">
-            {/* Current Player Grid (Left) */}
-            <div className="flex flex-col items-center justify-center">
-              <TacticalGrid
-                player="current"
-                board={currentPlayer.board}
-                faction={currentPlayer.faction}
-                interactive={myTurn}
-                highlightedCells={useMockData ? mockSelectionState.validPositions : selectionState.validPositions}
-                onCellClick={handleCellClick}
-                faceToFace={true}
-                className="transform-gpu"
-              />
-            </div>
+          {/* Grid Area with Flanking Previews */}
+          <div className="flex-1 flex items-center justify-center gap-4 md:gap-6 relative z-10">
+            {/* Left Preview - Current Player */}
+            <CardPreview
+              card={useMockData ? mockSelectionState.selectedCard : selectionState.selectedCard}
+              faction={currentPlayer.faction}
+              position="left"
+              className="flex-shrink-0"
+            />
 
-            {/* Battle Line Separator */}
-            <div className="flex-shrink-0 mx-4 md:mx-8">
-              <div className="w-px h-32 md:h-48 lg:h-64 bg-gradient-to-b from-transparent via-imperial-600 to-transparent opacity-60"></div>
-              <div className="text-center py-4">
-                <div className="text-imperial-400 font-gothic text-lg gothic-text-shadow">⚔</div>
+            {/* Grids Container */}
+            <div className="flex items-center justify-center">
+              {/* Current Player Grid (Left) */}
+              <div className="flex flex-col items-center justify-center">
+                <TacticalGrid
+                  player="current"
+                  board={currentPlayer.board}
+                  faction={currentPlayer.faction}
+                  interactive={myTurn}
+                  highlightedCells={useMockData ? mockSelectionState.validPositions : selectionState.validPositions}
+                  onCellClick={handleCellClick}
+                  faceToFace={true}
+                  className="transform-gpu"
+                />
+              </div>
+
+              {/* Battle Line Separator */}
+              <div className="flex-shrink-0 mx-4 md:mx-8">
+                <div className="w-px h-32 md:h-48 lg:h-64 bg-gradient-to-b from-transparent via-imperial-600 to-transparent opacity-60"></div>
+                <div className="text-center py-4">
+                  <div className="text-imperial-400 font-gothic text-lg gothic-text-shadow">⚔</div>
+                </div>
+              </div>
+
+              {/* Opponent Grid (Right) */}
+              <div className="flex flex-col items-center justify-center">
+                <TacticalGrid
+                  player="opponent"
+                  board={opponent.board}
+                  faction={opponent.faction}
+                  interactive={false}
+                  faceToFace={true}
+                  className="transform-gpu"
+                />
               </div>
             </div>
 
-            {/* Opponent Grid (Right) */}
-            <div className="flex flex-col items-center justify-center">
-              <TacticalGrid
-                player="opponent"
-                board={opponent.board}
-                faction={opponent.faction}
-                interactive={false}
-                faceToFace={true}
-                className="transform-gpu"
-              />
-            </div>
+            {/* Right Preview - Opponent (Face Down) */}
+            <CardPreview
+              card={null}
+              faction={opponent.faction}
+              position="right"
+              isFaceDown={true}
+              className="flex-shrink-0"
+            />
+          </div>
+
+          {/* Hand Section Below Grid */}
+          <div className="flex-shrink-0 h-[200px] border-t border-imperial-700/30 mt-4 relative z-10">
+            <HearthstoneHand
+              cards={currentPlayer.hand}
+              faction={currentPlayer.faction}
+              resources={currentPlayer.resources}
+              selectedCardId={useMockData
+                ? (mockSelectionState.selectedCard?.id ?? null)
+                : (selectionState.selectedCard?.id ?? null)}
+              selectedHandIndex={useMockData
+                ? (mockSelectionState.selectedHandIndex ?? null)
+                : (selectionState.selectedHandIndex ?? null)}
+              isMyTurn={myTurn}
+              onCardClick={handleCardClick}
+            />
           </div>
         </main>
 
@@ -498,21 +537,6 @@ const GameBoard: React.FC<GameBoardProps> = ({
           </div>
         </div>
       )}
-
-      {/* HearthstoneHand Component */}
-      <HearthstoneHand
-        cards={currentPlayer.hand}
-        faction={currentPlayer.faction}
-        resources={currentPlayer.resources}
-        selectedCardId={useMockData
-          ? (mockSelectionState.selectedCard?.id ?? null)
-          : (selectionState.selectedCard?.id ?? null)}
-        selectedHandIndex={useMockData
-          ? (mockSelectionState.selectedHandIndex ?? null)
-          : (selectionState.selectedHandIndex ?? null)}
-        isMyTurn={myTurn}
-        onCardClick={handleCardClick}
-      />
     </div>
   );
 };
