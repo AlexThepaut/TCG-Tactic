@@ -64,8 +64,8 @@ const Home = () => {
         <div className="absolute bottom-1/4 w-48 h-48 bg-gradient-radial from-blood-800/10 via-gothic-darkest/6 to-transparent rounded-full animate-warp-storm opacity-35" style={{ left: '15%', animationDelay: '3s' }}></div>
         <div className="absolute top-1/2 w-40 h-40 bg-gradient-radial from-imperial-800/6 via-gothic-darker/4 to-transparent rounded-full animate-warp-storm opacity-25" style={{ left: '45%', animationDelay: '6s' }}></div>
 
-        {/* Battle-scarred planets - distributed across full width */}
-        <div className="absolute top-1/8 w-24 h-24" style={{ left: '20%' }}>
+        {/* Battle-scarred planets - distributed across entire page */}
+        <div className="absolute top-[10%] w-24 h-24" style={{ left: '20%' }}>
           <div className="relative w-full h-full animate-orbit-slow">
             {/* Death world */}
             <div className="w-10 h-10 bg-gradient-to-br from-gothic-darker via-blood-900 to-gothic-black rounded-full animate-imperial-glow border border-blood-800/20"
@@ -73,7 +73,7 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="absolute bottom-1/6 w-32 h-32" style={{ left: '75%' }}>
+        <div className="absolute bottom-[15%] w-32 h-32" style={{ left: '75%' }}>
           <div className="relative w-full h-full animate-orbit-reverse">
             {/* Forge world */}
             <div className="w-12 h-12 bg-gradient-to-br from-robots-800 via-imperial-800 to-gothic-black rounded-full animate-plasma-glow border border-imperial-700/30"
@@ -81,11 +81,36 @@ const Home = () => {
           </div>
         </div>
 
-        <div className="absolute top-1/3 w-20 h-20" style={{ left: '50%' }}>
+        <div className="absolute top-[45%] w-20 h-20" style={{ left: '50%' }}>
           <div className="relative w-full h-full animate-orbit">
             {/* Corrupted world */}
             <div className="w-8 h-8 bg-gradient-to-br from-blood-800 via-gothic-dark to-gothic-black rounded-full animate-chaos-pulse border border-blood-700/30"
                  style={{ boxShadow: '0 0 20px #7f1d1d, inset 0 0 15px rgba(0,0,0,0.95)' }}></div>
+          </div>
+        </div>
+
+        {/* Additional planets for better vertical distribution */}
+        <div className="absolute top-[70%] w-28 h-28" style={{ left: '15%' }}>
+          <div className="relative w-full h-full animate-orbit-slow">
+            {/* Hive world */}
+            <div className="w-11 h-11 bg-gradient-to-br from-gothic-steel via-gothic-dark to-gothic-black rounded-full animate-imperial-glow border border-imperial-600/20"
+                 style={{ boxShadow: '0 0 18px #92400e, inset 0 0 22px rgba(0,0,0,0.9)' }}></div>
+          </div>
+        </div>
+
+        <div className="absolute top-[25%] w-18 h-18" style={{ left: '85%' }}>
+          <div className="relative w-full h-full animate-orbit-reverse">
+            {/* Dead world */}
+            <div className="w-7 h-7 bg-gradient-to-br from-void-800 via-gothic-darker to-gothic-black rounded-full animate-chaos-pulse border border-void-700/20"
+                 style={{ boxShadow: '0 0 12px #374151, inset 0 0 18px rgba(0,0,0,0.95)' }}></div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-[35%] w-22 h-22" style={{ left: '35%' }}>
+          <div className="relative w-full h-full animate-orbit">
+            {/* Agri world */}
+            <div className="w-9 h-9 bg-gradient-to-br from-aliens-800 via-gothic-dark to-gothic-black rounded-full animate-plasma-glow border border-aliens-700/25"
+                 style={{ boxShadow: '0 0 16px #5b21b6, inset 0 0 20px rgba(0,0,0,0.92)' }}></div>
           </div>
         </div>
 

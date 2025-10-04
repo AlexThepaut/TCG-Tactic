@@ -80,12 +80,18 @@ class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   handleRetry = () => {
     if (this.retryCount < this.maxRetries) {
       this.retryCount++;
-      this.setState({
-        hasError: false,
-        error: null,
-        errorInfo: null,
-        errorId: '',
-      });
+
+      // Exponential backoff delay: 1s, 2s, 4s
+      const delay = Math.pow(2, this.retryCount - 1) * 1000;
+
+      setTimeout(() => {
+        this.setState({
+          hasError: false,
+          error: null,
+          errorInfo: null,
+          errorId: '',
+        });
+      }, delay);
     }
   };
 

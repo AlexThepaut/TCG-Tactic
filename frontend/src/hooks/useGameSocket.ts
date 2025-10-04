@@ -17,7 +17,8 @@ import type {
   BasicResponse,
   MatchmakingResponse,
   GamePosition,
-  CombatResult
+  CombatResult,
+  GameCard
 } from '@/types';
 
 export interface GameSocketCallbacks {
@@ -208,6 +209,21 @@ const useGameSocket = (options: UseGameSocketOptions = {}): UseGameSocketReturn 
         toast.error(`Game error: ${errorMsg}`);
       };
 
+      const handleCombatResult = (result: CombatResult) => {
+        console.log('Combat result received:', result);
+        callbacks.onCombatResult?.(result);
+      };
+
+      const handleUnitDestroyed = (position: GamePosition, unit: GameCard) => {
+        console.log('Unit destroyed:', unit.name, 'at position', position);
+        toast.error(`${unit.name} was destroyed!`);
+      };
+
+      const handlePassiveTriggered = (data: { effect: string; positions: GamePosition[] }) => {
+        console.log('Passive effect triggered:', data.effect);
+        toast.success(`Faction passive: ${data.effect}`);
+      };
+
       // Matchmaking events
       const handleMatchFound = (gameId: string, opponent: PlayerData) => {
         console.log('Match found:', gameId, opponent);
@@ -245,6 +261,9 @@ const useGameSocket = (options: UseGameSocketOptions = {}): UseGameSocketReturn 
       on('game:turn_changed', handleTurnChanged);
       on('game:game_over', handleGameOver);
       on('game:error', handleGameError);
+      on('game:combat_result', handleCombatResult);
+      on('game:unit_destroyed', handleUnitDestroyed);
+      on('game:passive_triggered', handlePassiveTriggered);
       on('matchmaking:match_found', handleMatchFound);
       on('matchmaking:queue_update', handleQueueUpdate);
       on('matchmaking:cancelled', handleMatchmakingCancelled);
@@ -260,6 +279,9 @@ const useGameSocket = (options: UseGameSocketOptions = {}): UseGameSocketReturn 
         () => off('game:turn_changed', handleTurnChanged),
         () => off('game:game_over', handleGameOver),
         () => off('game:error', handleGameError),
+        () => off('game:combat_result', handleCombatResult),
+        () => off('game:unit_destroyed', handleUnitDestroyed),
+        () => off('game:passive_triggered', handlePassiveTriggered),
         () => off('matchmaking:match_found', handleMatchFound),
         () => off('matchmaking:queue_update', handleQueueUpdate),
         () => off('matchmaking:cancelled', handleMatchmakingCancelled),

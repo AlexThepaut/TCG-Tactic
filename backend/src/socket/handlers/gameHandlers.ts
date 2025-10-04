@@ -52,6 +52,7 @@ import { placementService } from '../../services/placementService';
 import { gameStateRepository } from '../../repositories/GameStateRepository';
 import { gameActionLogger } from '../../services/GameActionLogger';
 import { combatService } from '../../services/combatService';
+import { turnTimerService } from '../../services/turnTimerService';
 import {
   PLACEMENT_ERROR_CODES,
   formatErrorForClient,
@@ -59,7 +60,7 @@ import {
 } from '../../utils/errorCodes';
 import { performanceMonitor } from '../../utils/performanceMonitor';
 
-// Game timeout management
+// Game timeout management (legacy - now using TurnTimerService)
 const gameTimeouts = new Map<string, NodeJS.Timeout>();
 
 /**
@@ -1177,16 +1178,31 @@ async function handleEndTurn(
       gameState.version
     );
 
-    // Clear any existing turn timeout
+    // Clear any existing turn timeout (legacy)
     clearGameTimeout(socket.gameId);
 
-    // Set new turn timeout
-    setTurnTimeout(socket.gameId, io);
+    // Start turn timer for new current player (Task 1.3F)
+    turnTimerService.clearTimer(socket.gameId);
+    turnTimerService.startTurnTimer(
+      socket.gameId,
+      updatedState.currentPlayer.toString(),
+      updatedState.timeLimit
+    );
 
     // Convert to legacy format
     const legacyState = convertToLegacyFormat(updatedState);
 
-    // Broadcast turn change
+    // Broadcast turn change (Task 1.3F enhanced events)
+    io.to(`game:${socket.gameId}`).emit('turn:changed', {
+      currentPlayer: updatedState.currentPlayer.toString(),
+      turn: updatedState.turn,
+      phase: updatedState.phase,
+      timeRemaining: updatedState.timeRemaining,
+      timeLimit: updatedState.timeLimit,
+      phaseStartedAt: new Date()
+    });
+
+    // Legacy event for backward compatibility
     io.to(`game:${socket.gameId}`).emit('game:turn_changed', updatedState.currentPlayer.toString(), updatedState.timeRemaining);
     io.to(`game:${socket.gameId}`).emit('game:action_performed', convertActionToLegacy(action));
     io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);

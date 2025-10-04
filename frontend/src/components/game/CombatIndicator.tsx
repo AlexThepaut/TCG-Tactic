@@ -1,9 +1,10 @@
 /**
  * Combat Indicator Component - Task 1.3D Combat Logic Engine Integration
  * Visual feedback for attack validation, range indication, and combat results
+ * Optimized with React.memo for performance (Task 1.3G)
  */
-import React, { useEffect, useState } from 'react';
-import { GamePosition, GameCard, Faction } from '../../types';
+import React, { useEffect, useState, useMemo } from 'react';
+import { GamePosition, CombatResult, Faction } from '../../types';
 
 interface CombatIndicatorProps {
   attackerPosition?: GamePosition;
@@ -12,30 +13,6 @@ interface CombatIndicatorProps {
   combatResult?: CombatResult;
   showRangeIndicator?: boolean;
   faction: Faction;
-}
-
-interface CombatResult {
-  success: boolean;
-  attacker: {
-    name: string;
-    damage: number;
-    destroyed: boolean;
-    newHealth: number;
-  };
-  target: {
-    name: string;
-    damage: number;
-    destroyed: boolean;
-    newHealth: number;
-  };
-  factionEffects: FactionEffect[];
-}
-
-interface FactionEffect {
-  faction: Faction;
-  effectName: string;
-  description: string;
-  unitsAffected: GamePosition[];
 }
 
 export const CombatIndicator: React.FC<CombatIndicatorProps> = ({
@@ -70,7 +47,8 @@ export const CombatIndicator: React.FC<CombatIndicatorProps> = ({
     }
   }, [combatResult]);
 
-  const getFactionColors = (faction: Faction) => {
+  // Memoize faction colors
+  const colors = useMemo(() => {
     switch (faction) {
       case 'humans':
         return {
@@ -101,9 +79,7 @@ export const CombatIndicator: React.FC<CombatIndicatorProps> = ({
           glow: 'shadow-gray-400/50'
         };
     }
-  };
-
-  const colors = getFactionColors(faction);
+  }, [faction]);
 
   const renderRangeIndicator = () => {
     if (!showRangeIndicator || !attackerPosition) return null;
@@ -141,10 +117,14 @@ export const CombatIndicator: React.FC<CombatIndicatorProps> = ({
   const renderAttackLine = () => {
     if (!attackerPosition || !targetPosition || animationPhase !== 'attack') return null;
 
-    const x1 = attackerPosition.x * 20;
-    const y1 = attackerPosition.y * 33.33;
-    const x2 = targetPosition.x * 20;
-    const y2 = targetPosition.y * 33.33;
+    // Use combatResult positions if available for accuracy
+    const attacker = combatResult?.attacker.position || attackerPosition;
+    const target = combatResult?.target.position || targetPosition;
+
+    const x1 = attacker.x * 20;
+    const y1 = attacker.y * 33.33;
+    const x2 = target.x * 20;
+    const y2 = target.y * 33.33;
 
     return (
       <div className="absolute inset-0 pointer-events-none">
@@ -313,4 +293,14 @@ if (typeof document !== 'undefined') {
   document.head.appendChild(styleElement);
 }
 
-export default CombatIndicator;
+// Memoize component to prevent unnecessary re-renders
+export default React.memo(CombatIndicator, (prevProps, nextProps) => {
+  return (
+    prevProps.attackerPosition === nextProps.attackerPosition &&
+    prevProps.targetPosition === nextProps.targetPosition &&
+    prevProps.combatResult === nextProps.combatResult &&
+    prevProps.showRangeIndicator === nextProps.showRangeIndicator &&
+    prevProps.faction === nextProps.faction &&
+    (prevProps.validTargets?.length || 0) === (nextProps.validTargets?.length || 0)
+  );
+});

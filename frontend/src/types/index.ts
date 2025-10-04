@@ -115,14 +115,29 @@ export interface GameResult {
 }
 
 export interface CombatResult {
-  attacker: GamePosition;
-  target: GamePosition;
-  damage: number;
-  destroyed: boolean;
-  counterAttack?: {
+  success: boolean;
+  attacker: {
+    position: GamePosition;
+    name: string;
     damage: number;
     destroyed: boolean;
+    newHealth: number;
   };
+  target: {
+    position: GamePosition;
+    name: string;
+    damage: number;
+    destroyed: boolean;
+    newHealth: number;
+  };
+  factionEffects: FactionEffect[];
+}
+
+export interface FactionEffect {
+  faction: Faction;
+  effectName: string;
+  description: string;
+  unitsAffected: GamePosition[];
 }
 
 // UI State Types
@@ -305,6 +320,11 @@ export interface ServerToClientEvents {
   'game:game_over': (result: GameResult) => void;
   'game:error': (error: string) => void;
   'game:valid_positions': (response: ValidPositionsResponse) => void;
+
+  // Combat Events (Task 1.3E)
+  'game:combat_result': (result: CombatResult) => void;
+  'game:unit_destroyed': (position: GamePosition, unit: GameCard) => void;
+  'game:passive_triggered': (data: { effect: string; positions: GamePosition[] }) => void;
 
   // Matchmaking Updates
   'matchmaking:queue_update': (position: number, estimatedWait: number) => void;

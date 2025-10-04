@@ -139,6 +139,12 @@ export interface ServerToClientEvents {
   'game:error': (error: string) => void;
   'game:valid_positions': (response: ValidPositionsResponse) => void;
 
+  // Turn Management Events (Task 1.3F)
+  'turn:changed': (turnData: TurnUpdateData) => void;
+  'turn:timer_started': (timerData: TurnTimerData) => void;
+  'turn:timeout': (timeoutData: TurnTimeoutData) => void;
+  'phase:transition': (phaseData: PhaseTransitionData) => void;
+
   // Matchmaking Updates
   'matchmaking:queue_update': (position: number, estimatedWait: number) => void;
   'matchmaking:match_found': (gameId: string, opponent: PlayerData) => void;
@@ -152,6 +158,38 @@ export interface ServerToClientEvents {
   // System Events
   'system:maintenance': (message: string, scheduledAt: Date) => void;
   'system:error': (error: string) => void;
+}
+
+// Turn Management Event Data (Task 1.3F)
+export interface TurnUpdateData {
+  currentPlayer: string;
+  turn: number;
+  phase: 'resources' | 'draw' | 'actions' | 'end';
+  timeRemaining: number;
+  timeLimit: number;
+  phaseStartedAt: Date;
+}
+
+export interface TurnTimerData {
+  duration: number;
+  deadline: number;
+  playerId: string;
+}
+
+export interface TurnTimeoutData {
+  playerId: string;
+  newState: {
+    currentPlayer: string;
+    turn: number;
+    phase: string;
+    timeRemaining: number;
+  };
+}
+
+export interface PhaseTransitionData {
+  from: 'resources' | 'draw' | 'actions' | 'end';
+  to: 'resources' | 'draw' | 'actions' | 'end';
+  auto: boolean;
 }
 
 // Inter-server Events (for future scaling)

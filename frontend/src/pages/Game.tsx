@@ -3,6 +3,7 @@ import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import GameBoard from '@/components/game/GameBoard';
+import GameEndScreen from '@/components/game/GameEndScreen';
 import { GameSocketProvider, useGameSocketContext } from '@/contexts/GameSocketContext';
 import type { GameState, GameCard, Faction } from '@/types';
 
@@ -115,6 +116,25 @@ const GameContent = () => {
   const [isLoading, setIsLoading] = useState(true);
   const [useMockData, setUseMockData] = useState(false);
   const [mockGameState, setMockGameState] = useState<GameState | null>(null);
+  const [gameResult, setGameResult] = useState<any>(null);
+
+  // Handle game over from gameState
+  useEffect(() => {
+    if (gameState?.gameOver && gameState.winner) {
+      const result = {
+        winner: gameState.winner,
+        loser: gameState.currentPlayer === gameState.winner
+          ? (gameState.players.player1.id === gameState.winner ? gameState.players.player2.id : gameState.players.player1.id)
+          : gameState.currentPlayer,
+        winCondition: gameState.winCondition || 'Victory achieved',
+        gameEndedAt: new Date(),
+        gameDuration: Math.floor((new Date().getTime() - new Date(gameState.gameStartedAt).getTime()) / 1000),
+        totalTurns: gameState.turn,
+        actions: [] // Actions would come from game history if available
+      };
+      setGameResult(result);
+    }
+  }, [gameState?.gameOver, gameState?.winner]);
 
   // Determine if we should use mock data
   useEffect(() => {
@@ -258,6 +278,23 @@ const GameContent = () => {
     );
   }
 
+  // Game Over - show end screen
+  if (gameResult) {
+    const localPlayerId = activeGameState?.players.player1.id || 'player-1'; // TODO: Get actual local player ID
+
+    return (
+      <GameEndScreen
+        result={gameResult}
+        localPlayerId={localPlayerId}
+        onRematch={() => {
+          setGameResult(null);
+          // TODO: Implement rematch logic
+          toast.success('Rematch requested');
+        }}
+      />
+    );
+  }
+
   // Main game board with active state
   return (
     <div className="h-screen bg-gradient-to-br from-gothic-black via-void-900 to-gothic-darkest flex flex-col relative overflow-hidden">
@@ -292,6 +329,7 @@ const Game = () => {
 
   // Callbacks for socket events
   const handleGameOver = useCallback((result: any) => {
+    console.log('Game Over:', result);
     toast.success(`Game Over! Winner: ${result.winner}`);
     setTimeout(() => navigate('/'), 3000);
   }, [navigate]);

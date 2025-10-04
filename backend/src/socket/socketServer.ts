@@ -22,6 +22,9 @@ import { setupConnectionHandlers } from './handlers/connectionHandlers';
 import { setupGameHandlers } from './handlers/gameHandlers';
 import { setupMatchmakingHandlers } from './handlers/matchmakingHandlers';
 
+// Import turn timer service (Task 1.3F)
+import { turnTimerService } from '../services/turnTimerService';
+
 export class SocketServer {
   private io: SocketIOServer<
     ClientToServerEvents,
@@ -100,10 +103,14 @@ export class SocketServer {
     this.setupHealthChecks();
     this.setupCleanupTasks();
 
+    // Initialize turn timer service with Socket.io server (Task 1.3F)
+    turnTimerService.setSocketServer(this.io);
+
     loggers.game.info('Socket.io server configured successfully', {
       cors: env.FRONTEND_URL,
       transports: ['websocket', 'polling'],
-      environment: env.NODE_ENV
+      environment: env.NODE_ENV,
+      turnTimerService: 'initialized'
     });
   }
 

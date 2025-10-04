@@ -506,6 +506,10 @@ function createTestUnit(
     hasAttacked: false,
     summonedThisTurn: false,
     effects: [],
-    range
+    range,
+    setId: 'test-set',
+    isActive: true,
+    createdAt: new Date(),
+    updatedAt: new Date()
   };
 }
