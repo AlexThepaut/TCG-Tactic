@@ -321,6 +321,10 @@ export interface ServerToClientEvents {
   'game:error': (error: string) => void;
   'game:valid_positions': (response: ValidPositionsResponse) => void;
 
+  // Waiting Room Events
+  'game:player_ready': (data: { playerId: string; isReady: boolean }) => void;
+  'game:started': (data: { gameState: GameState }) => void;
+
   // Combat Events (Task 1.3E)
   'game:combat_result': (result: CombatResult) => void;
   'game:unit_destroyed': (position: GamePosition, unit: GameCard) => void;

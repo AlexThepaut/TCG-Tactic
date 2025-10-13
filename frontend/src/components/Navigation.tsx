@@ -9,6 +9,7 @@ import {
   QuestionMarkCircleIcon,
   Bars3Icon,
   XMarkIcon,
+  ArrowRightOnRectangleIcon,
 } from '@heroicons/react/24/outline';
 import {
   HomeIcon as HomeIconSolid,
@@ -19,10 +20,13 @@ import {
   QuestionMarkCircleIcon as QuestionMarkCircleIconSolid,
 } from '@heroicons/react/24/solid';
 import clsx from 'clsx';
+import { useAuth } from '../contexts/AuthContext';
+import { UserMenu } from './auth/UserMenu';
 
 const Navigation = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const location = useLocation();
+  const { isAuthenticated } = useAuth();
 
   const navigationItems = [
     {
@@ -34,7 +38,7 @@ const Navigation = () => {
     },
     {
       name: 'War Council',
-      href: '/game',
+      href: '/lobby',
       icon: PlayIcon,
       iconSolid: PlayIconSolid,
       color: 'humans',
@@ -169,6 +173,21 @@ const Navigation = () => {
                 </Link>
               );
             })}
+
+            {/* Auth Section */}
+            <div className="ml-4 pl-4 border-l border-imperial-700/40">
+              {isAuthenticated ? (
+                <UserMenu />
+              ) : (
+                <Link
+                  to="/login"
+                  className="flex items-center px-4 py-2 border border-amber-600/50 hover:border-amber-400 text-amber-300 hover:text-amber-200 font-tech font-medium text-sm tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/50 rounded"
+                >
+                  <UserIcon className="w-5 h-5 mr-2" />
+                  <span className="font-bold">AUTHENTICATE</span>
+                </Link>
+              )}
+            </div>
           </div>
 
           {/* Mobile menu button */}
@@ -225,6 +244,59 @@ const Navigation = () => {
                 </Link>
               );
             })}
+
+            {/* Mobile Auth Section */}
+            <div className="pt-2 mt-2 border-t border-imperial-700/40">
+              {isAuthenticated ? (
+                <div className="space-y-2">
+                  {/* User Profile Display */}
+                  <div className="flex items-center px-4 py-3 border border-amber-600/50 bg-amber-900/20 rounded">
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-600 to-amber-800 border border-amber-500/50 flex items-center justify-center mr-3">
+                      {useAuth().user?.profilePicture ? (
+                        <img src={useAuth().user?.profilePicture} alt={useAuth().user?.username || 'User'} className="w-full h-full rounded-full" />
+                      ) : (
+                        <UserIcon className="w-5 h-5 text-amber-200" />
+                      )}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-sm font-bold text-amber-300">{useAuth().user?.username}</p>
+                      <p className="text-xs text-gray-400">{useAuth().user?.email}</p>
+                    </div>
+                  </div>
+
+                  {/* Profile Link */}
+                  <Link
+                    to="/profile"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="flex items-center px-4 py-3 border border-amber-600/50 hover:border-amber-400 text-amber-300 hover:text-amber-200 font-tech font-medium text-sm tracking-wide transition-all duration-300 hover:bg-amber-800/30 rounded"
+                  >
+                    <UserIcon className="w-5 h-5 mr-3" />
+                    WAR HERO PROFILE
+                  </Link>
+
+                  {/* Logout Button */}
+                  <button
+                    onClick={() => {
+                      useAuth().logout();
+                      setIsMobileMenuOpen(false);
+                    }}
+                    className="w-full flex items-center px-4 py-3 border border-red-600/50 hover:border-red-400 text-red-400 hover:text-red-300 font-tech font-medium text-sm tracking-wide transition-all duration-300 hover:bg-red-800/30 rounded"
+                  >
+                    <ArrowRightOnRectangleIcon className="w-5 h-5 mr-3" />
+                    DISENGAGE
+                  </button>
+                </div>
+              ) : (
+                <Link
+                  to="/login"
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className="flex items-center px-4 py-3 border border-amber-600/50 hover:border-amber-400 text-amber-300 hover:text-amber-200 font-tech font-medium text-sm tracking-wide transition-all duration-300 hover:shadow-lg hover:shadow-amber-500/50 rounded"
+                >
+                  <UserIcon className="w-5 h-5 mr-3" />
+                  <span className="font-bold">AUTHENTICATE</span>
+                </Link>
+              )}
+            </div>
           </div>
         </div>
       )}

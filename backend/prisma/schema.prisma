@@ -8,21 +8,37 @@ datasource db {
 }
 
 model User {
-  id                  Int          @id @default(autoincrement())
-  username            String       @unique @db.VarChar(50)
-  email               String       @unique @db.VarChar(100)
-  passwordHash        String       @map("password_hash") @db.VarChar(255)
-  createdAt           DateTime     @default(now()) @map("created_at")
-  updatedAt           DateTime     @updatedAt @map("updated_at")
+  id                  Int            @id @default(autoincrement())
+  username            String         @unique @db.VarChar(50)
+  email               String         @unique @db.VarChar(100)
+
+  // Authentication fields (make passwordHash optional for OAuth users)
+  passwordHash        String?        @map("password_hash") @db.VarChar(255)
+  authProvider        AuthProvider   @default(local) @map("auth_provider")
+  googleId            String?        @unique @map("google_id") @db.VarChar(255)
+
+  // Profile fields from OAuth
+  profilePicture      String?        @map("profile_picture") @db.VarChar(500)
+  emailVerified       Boolean        @default(false) @map("email_verified")
+
+  // Timestamps
+  createdAt           DateTime       @default(now()) @map("created_at")
+  updatedAt           DateTime       @updatedAt @map("updated_at")
+
+  // Existing relations
   decks               Deck[]
-  gameActions         GameAction[] @relation("GameActionPlayer")
-  gameStatesAsCurrent GameState[]  @relation("GameStateCurrentPlayer")
-  gameStatesAsPlayer1 GameState[]  @relation("GameStatePlayer1")
-  gameStatesAsPlayer2 GameState[]  @relation("GameStatePlayer2")
-  gamesAsPlayer1      Game[]       @relation("Player1")
-  gamesAsPlayer2      Game[]       @relation("Player2")
-  gamesWon            Game[]       @relation("Winner")
+  gameActions         GameAction[]   @relation("GameActionPlayer")
+  gameStatesAsCurrent GameState[]    @relation("GameStateCurrentPlayer")
+  gameStatesAsPlayer1 GameState[]    @relation("GameStatePlayer1")
+  gameStatesAsPlayer2 GameState[]    @relation("GameStatePlayer2")
+  gamesAsPlayer1      Game[]         @relation("Player1")
+  gamesAsPlayer2      Game[]         @relation("Player2")
+  gamesWon            Game[]         @relation("Winner")
   userStats           UserStats?
+
+  // OAuth relations
+  refreshTokens       RefreshToken[]
+  oauthSessions       OAuthSession[]
 
   @@map("users")
 }
@@ -191,6 +207,45 @@ model UserStats {
   @@map("user_stats")
 }
 
+// New model for refresh token management
+model RefreshToken {
+  id           String    @id @default(cuid())
+  userId       Int       @map("user_id")
+  token        String    @unique @db.VarChar(500)
+  expiresAt    DateTime  @map("expires_at")
+  createdAt    DateTime  @default(now()) @map("created_at")
+  revokedAt    DateTime? @map("revoked_at")
+  replacedBy   String?   @map("replaced_by") @db.VarChar(500)
+
+  user         User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+  @@index([expiresAt])
+  @@map("refresh_tokens")
+}
+
+// OAuth session tracking for security audit
+model OAuthSession {
+  id              String      @id @default(cuid())
+  userId          Int         @map("user_id")
+  provider        AuthProvider
+  accessToken     String?     @map("access_token") @db.Text
+  refreshToken    String?     @map("refresh_token") @db.Text
+  tokenExpiresAt  DateTime?   @map("token_expires_at")
+  ipAddress       String?     @map("ip_address") @db.VarChar(45)
+  userAgent       String?     @map("user_agent") @db.VarChar(500)
+  createdAt       DateTime    @default(now()) @map("created_at")
+  lastUsedAt      DateTime    @updatedAt @map("last_used_at")
+  revokedAt       DateTime?   @map("revoked_at")
+
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([provider])
+  @@map("oauth_sessions")
+}
+
 enum Faction {
   humans
   aliens
@@ -206,4 +261,10 @@ enum GamePhase {
   resources
   draw
   actions
+}
+
+// New enum for authentication providers
+enum AuthProvider {
+  local
+  google
 }

@@ -992,6 +992,26 @@ export class GameMechanicsService {
 
   private checkWinConditions(gameState: GameState): void {
     try {
+      // Check if player 1 has no units (all enemy units destroyed)
+      const player1Units = gameState.players.player1.board.flat().filter(card => card !== null).length;
+      if (player1Units === 0 && gameState.turn > 1) {
+        gameState.gameOver = true;
+        gameState.winner = gameState.player2Id;
+        gameState.winCondition = 'All enemy units destroyed';
+        gameState.status = 'completed';
+        return;
+      }
+
+      // Check if player 2 has no units (all enemy units destroyed)
+      const player2Units = gameState.players.player2.board.flat().filter(card => card !== null).length;
+      if (player2Units === 0 && gameState.turn > 1) {
+        gameState.gameOver = true;
+        gameState.winner = gameState.player1Id;
+        gameState.winCondition = 'All enemy units destroyed';
+        gameState.status = 'completed';
+        return;
+      }
+
       // Check quest completion
       if (gameState.players.player1.questProgress.isCompleted) {
         gameState.gameOver = true;

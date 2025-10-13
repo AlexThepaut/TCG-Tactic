@@ -139,6 +139,10 @@ export interface ServerToClientEvents {
   'game:error': (error: string) => void;
   'game:valid_positions': (response: ValidPositionsResponse) => void;
 
+  // Waiting Room Events
+  'game:player_ready': (data: { playerId: string; isReady: boolean }) => void;
+  'game:started': (data: { gameState: GameState }) => void;
+
   // Turn Management Events (Task 1.3F)
   'turn:changed': (turnData: TurnUpdateData) => void;
   'turn:timer_started': (timerData: TurnTimerData) => void;

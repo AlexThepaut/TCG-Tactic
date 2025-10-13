@@ -471,7 +471,7 @@ export class GameStateService {
 
   // Private helper methods
 
-  private async createPlayerState(config: { userId: number; faction: Faction; deckId: number; questPreference?: string }): Promise<PlayerState> {
+  async createPlayerState(config: { userId: number; faction: Faction; deckId: number; questPreference?: string }): Promise<PlayerState> {
     // Get user info
     const user = await prisma.user.findUnique({
       where: { id: config.userId }

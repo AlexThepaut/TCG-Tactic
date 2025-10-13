@@ -21,6 +21,23 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT secret must be at least 32 characters'),
   JWT_EXPIRES_IN: z.string().default('24h'),
 
+  // Google OAuth
+  GOOGLE_CLIENT_ID: z.string().min(1, 'Google Client ID is required'),
+  GOOGLE_CLIENT_SECRET: z.string().min(1, 'Google Client Secret is required'),
+  GOOGLE_CALLBACK_URL: z.string().url('Invalid Google callback URL'),
+
+  // OAuth Redirects
+  OAUTH_SUCCESS_REDIRECT: z.string().url('Invalid OAuth success redirect URL'),
+  OAUTH_FAILURE_REDIRECT: z.string().url('Invalid OAuth failure redirect URL'),
+
+  // Session
+  SESSION_SECRET: z.string().min(32, 'Session secret must be at least 32 characters'),
+  SESSION_MAX_AGE: z.string().default('86400000').transform(Number),
+
+  // Refresh Tokens
+  REFRESH_TOKEN_SECRET: z.string().min(32, 'Refresh token secret must be at least 32 characters'),
+  REFRESH_TOKEN_EXPIRES_IN: z.string().default('7d'),
+
   // CORS and Frontend
   FRONTEND_URL: z.string().url().default('http://localhost:3000'),
 

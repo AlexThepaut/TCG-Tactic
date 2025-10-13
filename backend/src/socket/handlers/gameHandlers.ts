@@ -302,7 +302,7 @@ async function handleGameCreate(
 }
 
 /**
- * Handle joining a game
+ * Handle joining a game - Fixed for player 2 configuration
  */
 async function handleGameJoin(
   socket: AuthenticatedSocket,
@@ -361,19 +361,16 @@ async function handleGameJoin(
       });
     }
 
-    // Update game config for player 2
-    const updatedState = await gameStateService.updateGameState(gameId, {
-      player2Id: userId,
-      players: {
-        ...gameState.players,
-        player2: {
-          ...gameState.players.player2,
-          id: userId,
-          username: socket.userData.username,
-          faction: 'aliens' // TODO: Get from user's deck selection
-        }
-      }
-    }, gameState.version);
+    // Update player 2 configuration with proper state
+    gameState.player2Id = userId;
+    gameState.players.player2 = await gameStateService.createPlayerState({
+      userId,
+      faction: 'aliens', // TODO: Get from user's deck selection
+      deckId: 1 // TODO: Use actual deck
+    });
+
+    // Update game state
+    const updatedState = await gameStateService.updateGameState(gameId, gameState, gameState.version);
 
     // Join socket to game room
     socket.gameId = gameId;
@@ -385,7 +382,7 @@ async function handleGameJoin(
     addUserToGameRoom(userId.toString(), gameId, true);
 
     // Notify other players
-    socket.to(`game:${gameId}`).emit('game:player_joined', convertPlayerToLegacy(updatedState.players.player2));
+    io.to(`game:${gameId}`).emit('game:player_joined', convertPlayerToLegacy(updatedState.players.player2));
 
     loggers.game.info('Player joined game', {
       ...userInfo,
@@ -540,25 +537,15 @@ async function handleGameReady(
       players: updatedPlayers
     }, gameState.version);
 
-    // Check if both players are ready
+    // Broadcast ready status to all players
+    io.to(`game:${socket.gameId}`).emit('game:player_ready', {
+      playerId: userId.toString(),
+      isReady: true
+    });
+
+    // Check if both players are ready → start game
     if (updatedState.players.player1.isReady && updatedState.players.player2.isReady) {
-      // Start the game
-      const startedState = await gameStateService.updateGameState(socket.gameId, {
-        status: 'active',
-        turn: 1,
-        phase: 'resources'
-      }, updatedState.version);
-
-      // Set turn timeout
-      setTurnTimeout(socket.gameId, io);
-
-      // Broadcast game start
-      const legacyState = convertToLegacyFormat(startedState);
-      io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
-    } else {
-      // Broadcast updated ready state
-      const legacyState = convertToLegacyFormat(updatedState);
-      io.to(`game:${socket.gameId}`).emit('game:state_update', legacyState as any);
+      await startGame(socket.gameId, io);
     }
 
     callback({
@@ -577,6 +564,62 @@ async function handleGameReady(
     callback({
       success: false,
       error: 'Failed to update ready status'
+    });
+  }
+}
+
+/**
+ * Start the game when both players are ready
+ */
+async function startGame(
+  gameId: string,
+  io: SocketIOServer<ClientToServerEvents, ServerToClientEvents, InterServerEvents, SocketData>
+): Promise<void> {
+  try {
+    const gameState = await gameStateService.getGameState(gameId);
+    if (!gameState) return;
+
+    // Update status to active
+    gameState.status = 'active';
+    gameState.turn = 1;
+    gameState.phase = 'resources';
+
+    // Deal starting hands (3 cards each)
+    const startingHandSize = 3;
+
+    // Player 1 starting hand
+    for (let i = 0; i < startingHandSize; i++) {
+      if (gameState.players.player1.deck.length > 0) {
+        const card = gameState.players.player1.deck.shift()!;
+        gameState.players.player1.hand.push(card);
+      }
+    }
+
+    // Player 2 starting hand
+    for (let i = 0; i < startingHandSize; i++) {
+      if (gameState.players.player2.deck.length > 0) {
+        const card = gameState.players.player2.deck.shift()!;
+        gameState.players.player2.hand.push(card);
+      }
+    }
+
+    // Save updated state
+    await gameStateService.updateGameState(gameId, gameState, gameState.version);
+
+    // Start turn timer
+    turnTimerService.startTurnTimer(gameId, gameState.currentPlayer.toString(), gameState.timeLimit);
+
+    // Broadcast game start
+    const legacyState = convertToLegacyFormat(gameState);
+    io.to(`game:${gameId}`).emit('game:started', {
+      gameState: legacyState as any
+    });
+
+    loggers.game.info('Game started', { gameId });
+  } catch (error: any) {
+    loggers.game.error('Failed to start game', {
+      gameId,
+      error: error.message
     });
   }
 }

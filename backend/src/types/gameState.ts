@@ -52,6 +52,7 @@ export type WinCondition =
   | 'opponent_disconnected' // Opponent disconnected and timed out
   | 'deck_empty'           // Opponent ran out of cards
   | 'timeout'              // Game timeout reached
+  | 'All enemy units destroyed' // All enemy units eliminated
   | 'quest_timeout';       // Quest completion timeout
 
 // Enhanced Player State with faction-specific formations

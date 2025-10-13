@@ -7,6 +7,8 @@ import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
 import compression from 'compression';
+import session from 'express-session';
+import passport from 'passport';
 import dotenv from 'dotenv';
 
 // Load environment variables first
@@ -16,9 +18,11 @@ dotenv.config();
 import { env, isDevelopment } from './config/environment';
 import { logger, logStream, loggers } from './utils/logger';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
+import { initializePassport } from './auth/middleware/passportSetup';
 import { healthRoutes } from './routes/health';
 import cardsRouter from './routes/cards';
 import factionsRouter from './routes/factions';
+import authRouter from './routes/auth';
 
 // Create Express application
 const app = express();
@@ -121,8 +125,27 @@ app.use((req, res, next) => {
   next();
 });
 
+// Session middleware (required for Passport OAuth)
+app.use(session({
+  secret: env.SESSION_SECRET,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: !isDevelopment, // Secure cookies in production only
+    httpOnly: true,
+    maxAge: env.SESSION_MAX_AGE,
+    sameSite: 'lax',
+  },
+}));
+
+// Initialize Passport
+initializePassport();
+app.use(passport.initialize());
+app.use(passport.session());
+
 // API Routes
 app.use('/health', healthRoutes);
+app.use('/api/auth', authRouter); // Add auth routes
 app.use('/api/cards', cardsRouter);
 app.use('/api/factions', factionsRouter);
 

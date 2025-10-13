@@ -217,7 +217,7 @@ const Home = () => {
         {/* Action Cards - Tactical Operations */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           <Link
-            to="/game"
+            to="/lobby"
             className="bg-gothic-darkest/60 border-2 border-humans-600/50 hover:border-humans-400 p-8 relative group transition-all duration-500 hover:scale-105 overflow-hidden"
           >
             <div className="absolute inset-0 bg-gradient-to-br from-humans-900/20 to-humans-700/10 opacity-0 group-hover:opacity-100 transition-opacity"></div>

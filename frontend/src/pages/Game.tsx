@@ -4,7 +4,9 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import toast from 'react-hot-toast';
 import GameBoard from '@/components/game/GameBoard';
 import GameEndScreen from '@/components/game/GameEndScreen';
+import GameWaitingRoom from '@/components/game/GameWaitingRoom';
 import { GameSocketProvider, useGameSocketContext } from '@/contexts/GameSocketContext';
+import { getSocketService } from '@/services/socketService';
 import type { GameState, GameCard, Faction } from '@/types';
 
 // Mock game data for development/testing
@@ -117,6 +119,8 @@ const GameContent = () => {
   const [useMockData, setUseMockData] = useState(false);
   const [mockGameState, setMockGameState] = useState<GameState | null>(null);
   const [gameResult, setGameResult] = useState<any>(null);
+  const [isReady, setIsReady] = useState(false);
+  const [opponentReady, setOpponentReady] = useState(false);
 
   // Handle game over from gameState
   useEffect(() => {
@@ -153,6 +157,40 @@ const GameContent = () => {
     }
   }, [gameId, isConnected, gameState, mockGameState]);
 
+  // Listen for waiting room events
+  useEffect(() => {
+    const socketService = getSocketService();
+    if (!socketService) return;
+
+    const handlePlayerJoined = (player: any) => {
+      toast.success(`${player.username || 'Player'} joined the game!`);
+    };
+
+    const handlePlayerReady = (data: { playerId: string; isReady: boolean }) => {
+      const localPlayerId = gameState?.players.player1.id || 'player-1';
+      if (data.playerId === localPlayerId.toString()) {
+        setIsReady(data.isReady);
+      } else {
+        setOpponentReady(data.isReady);
+      }
+    };
+
+    const handleGameStarted = (data: { gameState: GameState }) => {
+      toast.success('Game started!');
+      // Game state will be updated via the normal game:state_update event
+    };
+
+    socketService.on('game:player_joined', handlePlayerJoined);
+    socketService.on('game:player_ready', handlePlayerReady);
+    socketService.on('game:started', handleGameStarted);
+
+    return () => {
+      socketService.off('game:player_joined', handlePlayerJoined);
+      socketService.off('game:player_ready', handlePlayerReady);
+      socketService.off('game:started', handleGameStarted);
+    };
+  }, [gameState]);
+
   // Handle socket errors
   useEffect(() => {
     if (error && !useMockData) {
@@ -161,8 +199,39 @@ const GameContent = () => {
     }
   }, [error, useMockData]);
 
+  const handleReady = useCallback(() => {
+    const socketService = getSocketService();
+    if (!socketService) {
+      toast.error('Not connected to game server');
+      return;
+    }
+
+    socketService.emit('game:ready', (response) => {
+      if (response.success) {
+        toast.success('You are ready!');
+      } else {
+        toast.error(response.error || 'Failed to ready up');
+      }
+    });
+  }, []);
+
   // Use mock data if in testing mode, otherwise use real game state
   const activeGameState = useMockData ? mockGameState : gameState;
+
+  // Show waiting room if game status is 'waiting'
+  if (activeGameState?.status === 'waiting' && !useMockData) {
+    const localPlayerId = activeGameState?.players.player1.id || 'player-1';
+    return (
+      <GameWaitingRoom
+        gameId={activeGameState.id}
+        isHost={activeGameState.players.player1.id.toString() === localPlayerId.toString()}
+        opponentJoined={activeGameState.players.player2.id !== 0}
+        onReady={handleReady}
+        isReady={isReady}
+        opponentReady={opponentReady}
+      />
+    );
+  }
 
   // Loading state
   if (isLoading) {
